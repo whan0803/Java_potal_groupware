@@ -1,0 +1,158 @@
+export const navGroups = [
+  { label: '대시보드', icon: 6, path: '/' },
+  {
+    label: '사용자 관리',
+    icon: 7,
+    children: [
+      ['사용자 목록', '/users'],
+      ['사용자 등록', '/users/new'],
+      ['사용자 상세', '/users/detail'],
+    ],
+  },
+  {
+    label: '권한 관리',
+    icon: 9,
+    children: [
+      ['권한 목록', '/roles'],
+      ['권한 등록', '/roles/new'],
+      ['권한별 메뉴 설정', '/roles/menu'],
+    ],
+  },
+  {
+    label: '메뉴 관리',
+    icon: 11,
+    children: [
+      ['메뉴 목록', '/menus'],
+      ['메뉴 등록·수정', '/menus/edit'],
+    ],
+  },
+  {
+    label: '공지사항',
+    icon: 12,
+    children: [
+      ['공지사항 목록', '/notices'],
+      ['공지사항 등록', '/notices/new'],
+    ],
+  },
+  {
+    label: '게시판 관리',
+    icon: 12,
+    children: [
+      ['게시판 목록', '/boards'],
+      ['게시판 등록', '/boards/new'],
+      ['게시글 목록', '/posts'],
+      ['게시글 등록', '/posts/new'],
+    ],
+  },
+  {
+    label: '예약 관리',
+    icon: 13,
+    children: [
+      ['예약 목록', '/reservations'],
+      ['예약 신청', '/reservations/new'],
+      ['예약 승인', '/reservations/approve'],
+    ],
+  },
+  { label: '결재', icon: 14, children: [['결재 대기함', '/approval']] },
+  {
+    label: '문서양식 관리',
+    icon: 14,
+    children: [
+      ['문서양식 목록', '/templates'],
+      ['문서양식 등록', '/templates/new'],
+    ],
+  },
+  {
+    label: '업무 관리',
+    icon: 15,
+    children: [
+      ['업무 목록', '/tasks'],
+      ['업무 등록', '/tasks/new'],
+    ],
+  },
+  {
+    label: '일정 관리',
+    icon: 16,
+    children: [
+      ['일정 목록', '/schedule'],
+      ['일정 등록', '/schedule/new'],
+    ],
+  },
+  {
+    label: '쪽지',
+    icon: 17,
+    children: [
+      ['받은 쪽지', '/messages'],
+      ['보낸 쪽지', '/messages/sent'],
+      ['쪽지 상세', '/messages/detail'],
+      ['빈 쪽지함', '/messages/empty'],
+      ['쪽지 작성', '/messages/compose'],
+    ],
+  },
+  {
+    label: '시스템 관리',
+    icon: 11,
+    children: [
+      ['공통코드 목록', '/codes'],
+      ['공통코드 등록', '/codes/new'],
+      ['감사 로그', '/logs'],
+      ['비밀번호 변경', '/password'],
+    ],
+  },
+];
+
+export const pageMeta = {
+  '/': ['홈', '대시보드'],
+  '/users': ['사용자 관리', '사용자 목록'],
+  '/users/new': ['사용자 관리', '사용자 등록'],
+  '/users/detail': ['사용자 관리', '사용자 목록', '상세', '사용자 상세'],
+  '/roles': ['권한 관리', '권한 목록'],
+  '/roles/detail': ['권한 관리', '권한 목록', '상세', '권한 상세'],
+  '/roles/new': ['권한 관리', '권한 등록'],
+  '/roles/menu': ['권한 관리', '권한별 메뉴 설정'],
+  '/menus': ['메뉴 관리', '메뉴 목록'],
+  '/menus/edit': ['메뉴 관리', '메뉴 등록'],
+  '/notices': ['공지사항', '공지사항 목록'],
+  '/notices/new': ['공지사항', '등록', '공지사항 등록'],
+  '/boards': ['게시판 관리', '게시판 목록'],
+  '/boards/new': ['게시판 관리', '게시판 등록'],
+  '/posts': ['게시판 관리', '게시글 목록'],
+  '/posts/new': ['게시판 관리', '게시글 등록'],
+  '/reservations': ['예약 관리', '예약 목록'],
+  '/reservations/new': ['예약 관리', '예약 신청'],
+  '/reservations/approve': ['예약 관리', '예약 승인', '예약 승인 관리'],
+  '/approval': ['결재', '결재함'],
+  '/templates': ['문서양식 관리', '문서양식 목록'],
+  '/templates/new': ['문서양식 관리', '문서양식 등록'],
+  '/tasks': ['업무 관리', '업무 목록'],
+  '/tasks/new': ['업무 관리', '업무 등록'],
+  '/schedule': ['일정 관리', '일정 목록'],
+  '/schedule/new': ['일정 관리', '일정 등록'],
+  '/messages': ['쪽지', '쪽지함'],
+  '/messages/sent': ['쪽지', '보낸 쪽지함'],
+  '/messages/detail': ['쪽지', '쪽지함'],
+  '/messages/empty': ['쪽지', '쪽지함'],
+  '/messages/compose': ['쪽지', '쪽지 작성'],
+  '/codes': ['시스템 관리', '공통코드 목록'],
+  '/codes/new': ['시스템 관리', '공통코드 등록'],
+  '/logs': ['시스템 관리', '감사 로그'],
+  '/password': ['시스템 관리', '비밀번호 변경'],
+};
+
+export const pageActions = {
+  '/users': ['사용자 등록', '/users/new'],
+  '/roles': ['권한 등록', '/roles/new'],
+  '/menus': ['메뉴 등록', '/menus/edit'],
+  '/notices': ['공지 등록', '/notices/new'],
+  '/boards': ['게시판 등록', '/boards/new'],
+  '/posts': ['게시글 등록', '/posts/new'],
+  '/reservations': ['예약 신청', '/reservations/new'],
+  '/templates': ['문서양식 등록', '/templates/new'],
+  '/tasks': ['업무 등록', '/tasks/new'],
+  '/schedule': ['일정 등록', '/schedule/new'],
+  '/messages': ['쪽지 작성', '/messages/compose'],
+  '/messages/sent': ['쪽지 작성', '/messages/compose'],
+  '/messages/detail': ['쪽지 작성', '/messages/compose'],
+  '/messages/empty': ['쪽지 작성', '/messages/compose'],
+  '/codes': ['공통코드 등록', '/codes/new'],
+};

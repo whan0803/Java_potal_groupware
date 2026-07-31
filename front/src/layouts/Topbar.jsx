@@ -1,0 +1,38 @@
+import Icon from '../components/Icon.jsx';
+import { useApp } from '../context/AppContext.jsx';
+
+function Topbar() {
+  const { user } = useApp();
+
+  return (
+    <header className="topbar">
+      <div className="topbar-title">
+        <strong>기반 포털 관리시스템</strong>
+        <span>Groupware Administration Portal</span>
+      </div>
+      <div className="topbar-actions">
+        <HeaderAction icon={0} count="2" tone="yellow" />
+        <HeaderAction icon={1} count="2" tone="red" />
+        <HeaderAction icon={2} count="2" tone="pink" />
+        <HeaderAction icon={3} />
+        <div className="topbar-user">
+          <span>{user?.name}</span>
+          <div className="top-avatar">
+            <Icon index={4} size={12.25} />
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function HeaderAction({ icon, count, tone }) {
+  return (
+    <button className="header-icon-button" type="button">
+      <Icon index={icon} />
+      {count ? <span className={`notification-dot ${tone}`}>{count}</span> : null}
+    </button>
+  );
+}
+
+export default Topbar;

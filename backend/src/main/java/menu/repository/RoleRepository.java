@@ -1,0 +1,19 @@
+package menu.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import user.entity.Role;
+
+import java.util.List;
+
+public interface RoleRepository extends JpaRepository<Role, Long> {
+    boolean existsByRoleCode(String roleCode);
+
+    boolean existsByRoleName(String roleName);
+
+    boolean existsByRoleNameAndRoleIdNot(
+            String roleName,
+            Long roleId
+    );
+
+    List<Role> findRoleByOrderByRoleIdDesc();
+}
