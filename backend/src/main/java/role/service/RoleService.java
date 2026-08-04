@@ -7,6 +7,7 @@ import menu.entity.RoleMenu;
 import menu.repository.MenuRepository;
 import menu.repository.RoleMenuRepository;
 import menu.repository.RoleRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import user.entity.Role;
@@ -61,8 +62,38 @@ public class RoleService {
     }
 
     //권한 목록 조회
-    public  List<RoleResponse> getRoles() {
-        return roleRepository.findRoleByOrderByRoleIdDesc().stream().map(RoleResponse::from).toList();
+    public List<RoleResponse> getRoles(
+            String roleCode,
+            String roleName,
+            String useYn
+    ) {
+        Specification<Role> specification =
+                (root, query, cb) -> cb.conjunction();
+
+        if (roleCode != null && !roleCode.isBlank()) {
+            String keyword = roleCode.trim().toLowerCase();
+            specification = specification.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("roleCode")), "%" + keyword + "%")
+            );
+        }
+
+        if (roleName != null && !roleName.isBlank()) {
+            String keyword = roleName.trim().toLowerCase();
+            specification = specification.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("roleName")), "%" + keyword + "%")
+            );
+        }
+
+        if (useYn != null && !useYn.isBlank()) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(cb.upper(root.get("useYn")), useYn.trim().toUpperCase())
+            );
+        }
+
+        return roleRepository.findAll(specification).stream()
+                .sorted(Comparator.comparing(Role::getRoleId).reversed())
+                .map(RoleResponse::from)
+                .toList();
     }
 
     //권한 상세 조회
@@ -116,6 +147,19 @@ public class RoleService {
         roleMenuRepository.deleteByRoleRoleId(roleId);
 
         roleRepository.delete(role);
+    }
+
+    @Transactional
+    public void deactivateRole(Long roleId, Long updatedBy) {
+        Role role = findRole(roleId);
+
+        if ("N".equals(role.getUseYn())) {
+            throw new IllegalStateException(
+                    "이미 사용 중지된 권한입니다."
+            );
+        }
+
+        role.deactivate(updatedBy);
     }
 
 
@@ -226,7 +270,7 @@ public class RoleService {
     ){
         if(!"Y".equals(value) && !"N".equals(value)) {
             throw new IllegalArgumentException(
-                    fieldName = "Y또는N 이어야 합니다"
+                    fieldName + "은(는) Y 또는 N이어야 합니다."
             );
         }
     }
@@ -239,7 +283,7 @@ public class RoleService {
         for(RoleMenuPermissionRequest menu : menus) {
             if(!menuIds.add(menu.menuId())) {
                 throw new IllegalArgumentException(
-                        "중복된 메뉴 번혹 존재합니다" + menu.menuId()
+                        "중복된 메뉴 번호가 존재합니다. menuId=" + menu.menuId()
                 );
             }
         }

@@ -10,7 +10,7 @@ public record RoleResponse(
         String roleName,
         String roleDescription,
         String useYn,
-        LocalDateTime createAt,
+        LocalDateTime createdAt,
         Long createdBy,
         LocalDateTime updatedAt,
         Long updatedBy

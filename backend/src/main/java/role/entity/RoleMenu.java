@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import user.entity.Role;
 import user.entity.User;
 
@@ -15,7 +17,7 @@ import java.time.LocalDateTime;
         name = "role_menus",
         uniqueConstraints = {
                 @UniqueConstraint(
-                name = "uk_rle_menus",
+                name = "uk_role_menus",
                 columnNames = {"role_id", "menu_id"}
         )
         }
@@ -37,15 +39,19 @@ public class RoleMenu {
     private Menu menu;
 
     @Column(name = "read_yn", nullable = false, length = 1)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String readYn = "Y";
 
     @Column(name = "create_yn", nullable = false, length = 1)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String createYn = "N";
 
     @Column(name = "update_yn", nullable = false, length = 1)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String updateYn = "N";
 
     @Column(name = "delete_yn", nullable = false, length = 1)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String deleteYn = "N";
 
     @Column(name = "created_at", nullable = false)

@@ -27,8 +27,14 @@ public class RoleController {
     }
 
     @GetMapping
-    public ResponseEntity<List<RoleResponse>> getRoles() {
-        return ResponseEntity.ok(roleService.getRoles());
+    public ResponseEntity<List<RoleResponse>> getRoles(
+            @RequestParam(required = false) String roleCode,
+            @RequestParam(required = false) String roleName,
+            @RequestParam(required = false) String useYn
+    ) {
+        return ResponseEntity.ok(
+                roleService.getRoles(roleCode, roleName, useYn)
+        );
     }
     //권한 상세
     @GetMapping("/{roleId}")
@@ -56,6 +62,15 @@ public class RoleController {
 
     ){
         roleService.deleteRole(roleId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{roleId}/deactivate")
+    public ResponseEntity<Void> deactivateRole(
+            @PathVariable Long roleId,
+            @RequestParam(required = false) Long updatedBy
+    ) {
+        roleService.deactivateRole(roleId, updatedBy);
         return ResponseEntity.noContent().build();
     }
 
