@@ -5,6 +5,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -29,29 +31,28 @@ public class Role {
     private String roleDescription;
 
     @Column(name = "use_yn", nullable = false, length = 1)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String useYn;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "created_by")
-    private long createdBy;
+    private Long createdBy;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @Column(name = "updated_by")
-    private long updatedBy;
+    private Long updatedBy;
 
     private Role(
-            Long roleId,
             String roleCode,
             String roleName,
             String roleDescription,
             String useYn,
             Long createdBy
     ){
-        this.roleId = roleId;
         this.roleCode = roleCode;
         this.roleName = roleName;
         this.roleDescription = roleDescription;
@@ -87,5 +88,30 @@ public class Role {
         this.roleDescription = roleDescription;
         this.useYn = useYn;
         this.updatedBy = updatedBy;
+    }
+
+    public void deactivate(Long updatedBy) {
+        this.useYn = "N";
+        this.updatedBy = updatedBy;
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+
+        if (updatedAt == null) {
+            updatedAt = createdAt;
+        }
+
+        if (useYn == null) {
+            useYn = "Y";
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

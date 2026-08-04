@@ -1,15 +1,36 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { buildRow, formTargets } from '../utils/formActions.js';
 import RoleSelectModal from './RoleSelectModal.jsx';
 
+const selectOptions = {
+  사용여부: ['사용', '미사용'],
+  '중요 공지 여부': ['일반', '중요'],
+  '첨부파일 허용 여부': ['허용', '미허용'],
+};
+
+const dateFields = new Set(['게시 시작일', '게시 종료일', '예약일', '마감일', '시작일', '종료일']);
+const timeFields = new Set(['시작 시간', '종료 시간']);
+const getToday = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 function FormPage({ formKey, config }) {
   const navigate = useNavigate();
-  const { lists, addListRow, addSchedule, addMessage } = useApp();
+  const [searchParams] = useSearchParams();
+  const { user, lists, addListRow, updateListRow, addSchedule, addMessage, upsertAccount } = useApp();
   const fields = config.fields ?? [];
-  const [values, setValues] = useState({});
-  const [selectedChip, setSelectedChip] = useState(config.chips?.[0] ?? '');
+  const target = formTargets[formKey];
+  const editIndex = Number.parseInt(searchParams.get('index') ?? '', 10);
+  const editingRow = Number.isInteger(editIndex) && target?.listKey ? lists[target.listKey]?.rows[editIndex] : null;
+  const initialValues = useMemo(() => rowToValues(formKey, editingRow), [formKey, editingRow]);
+  const [values, setValues] = useState(initialValues);
+  const [selectedChip, setSelectedChip] = useState(editingRow?.[1] ?? config.chips?.[0] ?? '');
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [files, setFiles] = useState([]);
@@ -21,28 +42,41 @@ function FormPage({ formKey, config }) {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const validation = validateForm(config, values, lists);
+    const validation = validateForm(config, values, lists, { formKey, editingRow, selectedChip });
     if (!validation.ok) {
       setError(validation.message);
       return;
     }
 
-    const target = formTargets[formKey];
     if (!target) return;
 
     if (target.listKey) {
-      const row = buildRow(formKey, { ...values, '예약 유형': selectedChip }, lists[target.listKey].rows.length);
-      if (row) addListRow(target.listKey, row);
+      const sourceValues = { ...values, '예약 유형': selectedChip };
+      const rowNumber = editingRow?.[0] && /^\d+$/.test(editingRow[0])
+        ? Number(editingRow[0]) - 1
+        : lists[target.listKey].rows.length;
+      const row = buildRow(formKey, sourceValues, rowNumber, editingRow);
+      if (row && editingRow) updateListRow(target.listKey, editIndex, row);
+      if (row && !editingRow) addListRow(target.listKey, row);
+      if (formKey === 'userRegister') {
+        upsertAccount({
+          id: values.아이디,
+          password: editingRow ? values.비밀번호 : values.비밀번호 || 'user123',
+          name: values.이름,
+          role: selectedRoles[0] ?? '일반 사용자',
+          enabled: values.사용여부 !== '미사용',
+        });
+      }
     }
 
     if (formKey === 'messageCompose') {
-      addMessage(['홍길동', '방금', values.제목 || '새 쪽지', 'IT기획팀']);
+      addMessage([user?.name ?? '홍길동', '방금', values.제목 || '새 쪽지', values.수신자 || '수신자', values.내용 || '']);
     }
 
     if (formKey === 'scheduleRegister') {
       addSchedule({
         title: values.제목 || '신규 일정',
-        date: values.시작일 || '2026-07-28',
+        date: values.시작일 || getToday(),
         time: values['시작 시간'] || '09:00',
       });
     }
@@ -98,7 +132,15 @@ function FormPage({ formKey, config }) {
           취소
         </button>
         {config.action === '중복 확인' ? (
-          <button className="button secondary" type="button">
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => {
+              const validation = validateForm(config, values, lists, { formKey, editingRow, selectedChip });
+              setError(validation.ok ? '' : validation.message);
+              window.alert(validation.ok ? '예약 가능한 시간입니다.' : validation.message);
+            }}
+          >
             중복 확인
           </button>
         ) : null}
@@ -120,12 +162,87 @@ function FormPage({ formKey, config }) {
   );
 }
 
-function validateForm(config, values, lists) {
+function rowToValues(formKey, row) {
+  if (!row) return {};
+
+  const mappers = {
+    userRegister: () => ({
+      아이디: row[1],
+      이름: row[2],
+      부서: row[3],
+      이메일: row[4],
+      사용여부: row[6],
+    }),
+    roleRegister: () => ({
+      '권한 코드': row[1],
+      권한명: row[2],
+      설명: row[3],
+      사용여부: row[5],
+    }),
+    menuEdit: () => ({
+      메뉴명: row[0],
+      URL: row[1],
+      '정렬 순서': row[2],
+      사용여부: row[4],
+    }),
+    noticeRegister: () => {
+      const [startDate = '', endDate = ''] = String(row[4] ?? '').split(' ~ ');
+      return {
+        '중요 공지 여부': row[1],
+        제목: row[2],
+        '게시 시작일': startDate,
+        '게시 종료일': endDate,
+      };
+    },
+    boardRegister: () => ({
+      게시판명: row[1],
+      설명: row[2],
+      '첨부파일 허용 여부': row[3],
+      사용여부: row[4],
+    }),
+    postRegister: () => ({
+      '게시판 ID': row[1],
+      제목: row[2],
+      사용여부: row[6],
+    }),
+    reservationRegister: () => ({
+      '자원 선택': row[2],
+      예약일: row[5],
+      '시작 시간': String(row[6] ?? '').split('~')[0] ?? '',
+      '종료 시간': String(row[6] ?? '').split('~')[1] ?? '',
+      '사용 목적': row[7],
+    }),
+    taskRegister: () => ({
+      '업무 제목': row[1],
+      담당자: row[2],
+      마감일: row[4],
+    }),
+    templateRegister: () => ({
+      '양식 코드': row[1],
+      양식명: row[2],
+      설명: row[3],
+      사용여부: row[4],
+    }),
+    codeRegister: () => ({
+      '코드 그룹 ID': row[1],
+      그룹명: row[2],
+      설명: row[3],
+      사용여부: row[4],
+    }),
+  };
+
+  return mappers[formKey]?.() ?? {};
+}
+
+function validateForm(config, values, lists, options = {}) {
   const fields = [
     ...(config.fields ?? []),
     ...(config.sections?.flatMap((section) => section.fields ?? []) ?? []),
   ];
-  const required = fields.filter((field) => field.includes('*')).map((field) => field.replace(' *', ''));
+  const required = fields
+    .filter((field) => field.includes('*'))
+    .map((field) => field.replace(' *', ''))
+    .filter((field) => !(options.formKey === 'userRegister' && options.editingRow && field.includes('비밀번호')));
   const missing = required.find((field) => !values[field]?.trim());
   if (missing) return { ok: false, message: `${missing} 항목은 필수입니다.` };
 
@@ -141,19 +258,30 @@ function validateForm(config, values, lists) {
   if (values.시작일 && values.종료일 && values.종료일 < values.시작일) {
     return { ok: false, message: '종료일은 시작일보다 이전일 수 없습니다.' };
   }
-  if (values.아이디 && lists.users.rows.some((row) => row[1] === values.아이디)) {
+  if (options.formKey === 'reservationRegister') {
+    const conflict = lists.reservations.rows.some((row) => {
+      if (row === options.editingRow || row[8] === '반려') return false;
+      const sameType = row[1] === options.selectedChip;
+      const sameResource = row[2] === values['자원 선택'];
+      const sameDate = row[5] === values.예약일;
+      const [start = '', end = ''] = String(row[6] ?? '').split('~');
+      return sameType && sameResource && sameDate && values['시작 시간'] < end && values['종료 시간'] > start;
+    });
+    if (conflict) return { ok: false, message: '이미 예약된 시간입니다.' };
+  }
+  if (values.아이디 && lists.users.rows.some((row) => row !== options.editingRow && row[1] === values.아이디)) {
     return { ok: false, message: '이미 사용 중인 아이디입니다.' };
   }
-  if (values.이메일 && lists.users.rows.some((row) => row[4] === values.이메일)) {
+  if (values.이메일 && lists.users.rows.some((row) => row !== options.editingRow && row[4] === values.이메일)) {
     return { ok: false, message: '이미 사용 중인 이메일입니다.' };
   }
-  if (values['권한 코드'] && lists.roles.rows.some((row) => row[1] === values['권한 코드'])) {
+  if (values['권한 코드'] && lists.roles.rows.some((row) => row !== options.editingRow && row[1] === values['권한 코드'])) {
     return { ok: false, message: '이미 사용 중인 권한 코드입니다.' };
   }
-  if (values['양식 코드'] && lists.templates.rows.some((row) => row[1] === values['양식 코드'])) {
+  if (values['양식 코드'] && lists.templates.rows.some((row) => row !== options.editingRow && row[1] === values['양식 코드'])) {
     return { ok: false, message: '이미 사용 중인 양식 코드입니다.' };
   }
-  if (values['코드 그룹 ID'] && lists.codes.rows.some((row) => row[1] === values['코드 그룹 ID'])) {
+  if (values['코드 그룹 ID'] && lists.codes.rows.some((row) => row !== options.editingRow && row[1] === values['코드 그룹 ID'])) {
     return { ok: false, message: '이미 사용 중인 코드 그룹 ID입니다.' };
   }
 
@@ -194,6 +322,7 @@ function FieldGrid({ fields, placeholders = {}, values, onChange }) {
         const label = field.replace(' *', '');
         const required = field.includes('*');
         const large = ['내용', '업무 내용', '사용 목적'].includes(label);
+        const options = selectOptions[label];
 
         return (
           <label className={large ? 'field large' : 'field'} key={field}>
@@ -203,9 +332,24 @@ function FieldGrid({ fields, placeholders = {}, values, onChange }) {
             </span>
             {large ? (
               <textarea value={values[label] ?? ''} onChange={(event) => onChange(label, event.target.value)} />
+            ) : options ? (
+              <select
+                required={required}
+                value={values[label] ?? ''}
+                onChange={(event) => onChange(label, event.target.value)}
+              >
+                <option value="">선택</option>
+                {options.map((option) => (
+                  <option value={option} key={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             ) : (
               <input
+                type={dateFields.has(label) ? 'date' : timeFields.has(label) ? 'time' : 'text'}
                 placeholder={placeholders[label] ?? ''}
+                required={required}
                 value={values[label] ?? ''}
                 onChange={(event) => onChange(label, event.target.value)}
               />

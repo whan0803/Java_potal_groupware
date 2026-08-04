@@ -18,7 +18,7 @@ public class UserResponse {
     private String email;
     private String phone;
     private String useYn;
-    private LocalDateTime createAt;
+    private LocalDateTime createdAt;
     private List<RoleResponse> roles;
 
     public static UserResponse from(User user) {
@@ -30,20 +30,20 @@ public class UserResponse {
                 )).toList();
 
         return UserResponse.builder()
-                .userId(user.getUser_id())
+                .userId(user.getUserId())
                 .loginId(user.getLoginId())
                 .userName(user.getUserName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .useYn(user.getUseYn())
-                .createAt(user.getCreatedAt())
+                .createdAt(user.getCreatedAt())
                 .roles(roles)
                 .build();
     }
 
     public record  RoleResponse(
             Long roleId,
-            String roleCOde,
+            String roleCode,
             String roleName
     ){
 

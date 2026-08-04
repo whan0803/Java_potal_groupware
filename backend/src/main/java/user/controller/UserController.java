@@ -25,7 +25,7 @@ public class UserController {
             @RequestParam(required = false) String loginId,
             @RequestParam(required = false) String userName,
             @RequestParam(required = false) String email,
-            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String useYn,
             @RequestParam(required = false) Long roleId,
             Pageable pageable
     ) {
@@ -33,7 +33,7 @@ public class UserController {
                 loginId,
                 userName,
                 email,
-                phone,
+                useYn,
                 roleId,
                 pageable
         );
@@ -44,12 +44,20 @@ public class UserController {
         return userService.getUser(userId);
     }
 
-    @GetMapping("/check-email")
+    @GetMapping("/check-login-id")
     public DuplicateCheckResponse checkLoginId(@RequestParam String loginId) {
         return userService.checkLoginId(loginId);
     }
 
-    @GetMapping
+    @GetMapping("/check-email")
+    public DuplicateCheckResponse checkEmail(
+            @RequestParam String email,
+            @RequestParam(required = false) Long userId
+    ) {
+        return userService.checkEmail(email, userId);
+    }
+
+    @PostMapping
     public ResponseEntity<Map<String, Object>> createUser(
             @Valid @RequestBody UserCreateRequest request
             ) {
@@ -59,7 +67,7 @@ public class UserController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
-                        "message", "시용자가 등록되었습니다.",
+                        "message", "사용자가 등록되었습니다.",
                         "userId", userId
                 ));
     }
@@ -111,7 +119,7 @@ public class UserController {
         userService.resetPassword(userId, actorId);
 
         return  Map.of(
-                "message", "비밀번호가 초기화되었습니다,",
+                "message", "비밀번호가 초기화되었습니다.",
                 "temporaryPassword", temporaryPassword
         );
 

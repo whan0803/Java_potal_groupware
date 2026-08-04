@@ -1,4 +1,11 @@
 package auth.dto;
 
-public record CurrentUserResponse() {
+import java.util.List;
+
+public record CurrentUserResponse(
+        Long userId,
+        String loginId,
+        String userName,
+        List<String> roles
+) {
 }

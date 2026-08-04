@@ -3,7 +3,7 @@ import Icon from '../components/Icon.jsx';
 import { pageActions, pageMeta } from '../data/navigation.js';
 
 function PageHeader() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const meta = pageMeta[pathname] ?? pageMeta['/'];
   const crumbs = meta.slice(0, -1);
   const title = meta.at(-1);
@@ -29,10 +29,10 @@ function PageHeader() {
               <Icon index={20} size={12.25} />
               목록
             </Link>
-            <button className="button primary" type="button">
+            <Link className="button primary" to={`/users/new${search}`}>
               <Icon index={21} size={12.25} />
               수정
-            </button>
+            </Link>
           </>
         ) : null}
         {action ? (

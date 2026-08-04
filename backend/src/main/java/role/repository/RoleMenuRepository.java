@@ -1,6 +1,6 @@
-package menu.repository;
+package role.repository;
 
-import menu.entity.RoleMenu;
+import role.entity.RoleMenu;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 

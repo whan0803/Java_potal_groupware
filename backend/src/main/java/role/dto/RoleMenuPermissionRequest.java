@@ -1,4 +1,4 @@
-package menu.dto;
+package role.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;

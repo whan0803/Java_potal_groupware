@@ -1,4 +1,4 @@
-package menu.entity;
+package role.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;

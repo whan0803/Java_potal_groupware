@@ -2,7 +2,9 @@ import Icon from '../components/Icon.jsx';
 import { useApp } from '../context/AppContext.jsx';
 
 function Topbar() {
-  const { user } = useApp();
+  const { user, lists, messages } = useApp();
+  const waitingReservations = lists.reservations.rows.filter((row) => row[8] === '대기').length;
+  const waitingApprovals = lists.approval.rows.filter((row) => row[6] !== '완료').length;
 
   return (
     <header className="topbar">
@@ -11,9 +13,9 @@ function Topbar() {
         <span>Groupware Administration Portal</span>
       </div>
       <div className="topbar-actions">
-        <HeaderAction icon={0} count="2" tone="yellow" />
-        <HeaderAction icon={1} count="2" tone="red" />
-        <HeaderAction icon={2} count="2" tone="pink" />
+        <HeaderAction icon={0} count={String(waitingReservations)} tone="yellow" />
+        <HeaderAction icon={1} count={String(waitingApprovals)} tone="red" />
+        <HeaderAction icon={2} count={String(messages.length)} tone="pink" />
         <HeaderAction icon={3} />
         <div className="topbar-user">
           <span>{user?.name}</span>
@@ -30,7 +32,7 @@ function HeaderAction({ icon, count, tone }) {
   return (
     <button className="header-icon-button" type="button">
       <Icon index={icon} />
-      {count ? <span className={`notification-dot ${tone}`}>{count}</span> : null}
+      {Number(count) > 0 ? <span className={`notification-dot ${tone}`}>{count}</span> : null}
     </button>
   );
 }

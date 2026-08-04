@@ -1,4 +1,4 @@
-package menu.dto;
+package role.dto;
 
 import user.entity.Role;
 

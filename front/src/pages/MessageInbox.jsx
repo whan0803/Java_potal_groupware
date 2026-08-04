@@ -46,15 +46,12 @@ function MessageInbox({ mode = 'inbox' }) {
         {selectedMessage ? (
           <>
             <h2>{selectedMessage[2]}</h2>
-            <p>{isSent ? `보낸 사람: 홍길동 (IT기획팀)` : `보낸 사람: ${selectedMessage[0]} (${selectedMessage[3]})`}</p>
+            <p>{isSent ? `보낸 사람: ${selectedMessage[0]}` : `보낸 사람: ${selectedMessage[0]} (${selectedMessage[3]})`}</p>
             <p>{isSent ? `받는 사람: ${selectedMessage[3]}` : '받는 사람: 홍길동 (IT기획팀)'}</p>
             <time>{selectedMessage[1]}</time>
             <div className="message-body">
-              {selectedMessage[2]} 관련 내용입니다.
-              <br />
-              선택한 쪽지의 상세 내용을 확인할 수 있습니다.
-              <br />
-              <br />
+              {selectedMessage[4] || `${selectedMessage[2]} 관련 내용입니다.`}
+              <br /><br />
               - 구분: {isSent ? '보낸 쪽지' : '받은 쪽지'}
               <br />
               - 담당 부서: {selectedMessage[3]}

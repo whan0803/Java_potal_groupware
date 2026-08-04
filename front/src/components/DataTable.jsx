@@ -15,6 +15,19 @@ function renderCell(cell, options = {}) {
   }
 
   if (options.isAction) {
+    if (options.canDelete) {
+      return (
+        <span className="role-action-group">
+          <button className="table-action" type="button" onClick={options.onAction}>
+            {cell}
+          </button>
+          <button className="table-action danger" type="button" onClick={() => options.onAction('삭제')}>
+            삭제
+          </button>
+        </span>
+      );
+    }
+
     return (
       <button className="table-action" type="button" onClick={options.onAction}>
         {cell}
@@ -59,6 +72,7 @@ function DataTable({ columns, rows, onAction, listKey }) {
                   {renderCell(cell, {
                     isRoleAction: listKey === 'roles' && cellIndex === actionColumnIndex,
                     isAction: cellIndex === actionColumnIndex,
+                    canDelete: canDeleteRow(listKey, cell),
                     onAction: (actionValue = cell) => onAction?.(row, actionValue),
                   })}
                 </td>
@@ -69,6 +83,11 @@ function DataTable({ columns, rows, onAction, listKey }) {
       </table>
     </div>
   );
+}
+
+function canDeleteRow(listKey, action) {
+  if (!['수정', '상세', '보기'].includes(action)) return false;
+  return !['logs', 'approval', 'reservations'].includes(listKey);
 }
 
 export default DataTable;

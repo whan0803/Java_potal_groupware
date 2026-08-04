@@ -1,9 +1,7 @@
-package menu.dto;
+package role.dto;
 
-import menu.entity.Menu;
-import menu.entity.RoleMenu;
-
-import java.time.LocalDateTime;
+import role.entity.Menu;
+import role.entity.RoleMenu;
 
 public record RoleMenuResponse(
         Long menuId,

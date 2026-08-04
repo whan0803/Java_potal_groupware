@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
-
-const roles = [
-  { code: 'ROLE_ADMIN', name: '시스템 관리자' },
-  { code: 'ROLE_MANAGER', name: '부서 관리자' },
-  { code: 'ROLE_USER', name: '일반 사용자' },
-];
+import { useApp } from '../context/AppContext.jsx';
 
 function RoleSelectModal({ selectedRoles, onClose, onConfirm }) {
+  const { lists } = useApp();
   const [query, setQuery] = useState('');
   const [checkedRoles, setCheckedRoles] = useState(selectedRoles);
+  const roles = useMemo(
+    () => lists.roles.rows.map((row) => ({ code: row[1], name: row[2], enabled: row[5] === '사용' })),
+    [lists.roles.rows],
+  );
   const filteredRoles = useMemo(
-    () => roles.filter((role) => `${role.code} ${role.name}`.toLowerCase().includes(query.toLowerCase())),
-    [query],
+    () =>
+      roles.filter(
+        (role) => role.enabled && `${role.code} ${role.name}`.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [query, roles],
   );
 
   const toggleRole = (code) => {

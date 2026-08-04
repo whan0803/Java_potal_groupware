@@ -1,34 +1,33 @@
-import { Link } from 'react-router-dom';
-
-const permissionRows = [
-  ['사용자 목록', '/users/list', true, true, true, true],
-  ['사용자 등록', '/users/new', true, true, false, false],
-  ['권한 목록', '/roles/list', true, true, true, true],
-  ['권한 등록', '/roles/new', true, true, true, true],
-  ['권한별 메뉴 설정', '/roles/menu', true, true, true, true],
-  ['메뉴 목록', '/menus/list', true, true, true, true],
-];
+import { Link, useSearchParams } from 'react-router-dom';
+import { useApp } from '../context/AppContext.jsx';
 
 function RoleDetail() {
+  const { lists, roleMenus } = useApp();
+  const [searchParams] = useSearchParams();
+  const index = Number.parseInt(searchParams.get('index') ?? '0', 10);
+  const row = lists.roles.rows[index] ?? lists.roles.rows[0];
+  const roleCode = row[1];
+  const permissionRows = roleMenus[roleCode] ?? [];
+
   return (
     <div className="role-detail-grid">
       <section className="content-card role-info-card">
         <h2>권한 정보</h2>
         <dl>
           <dt>권한 코드</dt>
-          <dd>ROLE_ADMIN</dd>
+          <dd>{row[1]}</dd>
           <dt>권한명</dt>
-          <dd>시스템 관리자</dd>
+          <dd>{row[2]}</dd>
           <dt>설명</dt>
-          <dd>시스템 전체 관리 권한</dd>
+          <dd>{row[3]}</dd>
           <dt>사용자 수</dt>
-          <dd>2명</dd>
+          <dd>{row[4]}</dd>
           <dt>사용여부</dt>
           <dd>
-            <span className="pill 사용">사용</span>
+            <span className={`pill ${row[5]}`}>{row[5]}</span>
           </dd>
           <dt>등록일</dt>
-          <dd>2024-01-01</dd>
+          <dd>{row[6]}</dd>
         </dl>
       </section>
       <section className="content-card role-permission-card">
@@ -38,7 +37,7 @@ function RoleDetail() {
             <Link className="button secondary" to="/roles">
               목록
             </Link>
-            <Link className="button primary" to="/roles/menu">
+            <Link className="button primary" to={`/roles/menu?role=${roleCode}`}>
               수정
             </Link>
           </div>
@@ -55,15 +54,18 @@ function RoleDetail() {
             </tr>
           </thead>
           <tbody>
-            {permissionRows.map((row) => (
-              <tr key={row[1]}>
-                <td>{row[0]}</td>
-                <td>{row[1]}</td>
-                {row.slice(2).map((enabled, index) => (
-                  <td className={enabled ? 'permission-on' : 'permission-off'} key={`${row[1]}-${index}`}>
+            {permissionRows.map((permission) => (
+              <tr key={permission.url}>
+                <td>{permission.name}</td>
+                <td>{permission.url}</td>
+                {['read', 'create', 'update', 'delete'].map((key) => {
+                  const enabled = permission[key];
+                  return (
+                  <td className={enabled ? 'permission-on' : 'permission-off'} key={`${permission.url}-${key}`}>
                     {enabled ? '✓' : '×'}
                   </td>
-                ))}
+                  );
+                })}
               </tr>
             ))}
           </tbody>

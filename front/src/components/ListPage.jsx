@@ -10,9 +10,10 @@ function ListPage({ listKey }) {
   const [activeTab, setActiveTab] = useState(0);
   const [query, setQuery] = useState('');
   const filteredRows = useMemo(() => {
-    if (!query.trim()) return config.rows;
-    return config.rows.filter((row) => row.some((cell) => String(cell).includes(query.trim())));
-  }, [config.rows, query]);
+    const rows = filterRowsByTab(config, activeTab);
+    if (!query.trim()) return rows;
+    return rows.filter((row) => row.some((cell) => String(cell).includes(query.trim())));
+  }, [config, activeTab, query]);
 
   return (
     <section className="content-card list-card">
@@ -53,6 +54,18 @@ function ListPage({ listKey }) {
   );
 }
 
+function filterRowsByTab(config, activeTab) {
+  if (!config.tabs) return config.rows;
+  const tab = config.tabs[activeTab] ?? '';
+  const statusIndex = config.columns.findIndex((column) => ['상태', '결재 상태', '사용여부'].includes(column));
+  if (statusIndex < 0) return config.rows;
+  if (tab.includes('대기')) return config.rows.filter((row) => ['진행중', '대기'].includes(row[statusIndex]));
+  if (tab.includes('완료')) return config.rows.filter((row) => row[statusIndex] === '완료');
+  if (tab.includes('사용')) return config.rows.filter((row) => row[statusIndex] === '사용');
+  if (tab.includes('미사용')) return config.rows.filter((row) => row[statusIndex] === '미사용');
+  return config.rows;
+}
+
 function handleTableAction({ listKey, action, rowIndex, navigate, updateRowStatus, removeRow }) {
   if (action === '삭제') {
     removeRow(listKey, rowIndex);
@@ -66,14 +79,15 @@ function handleTableAction({ listKey, action, rowIndex, navigate, updateRowStatu
   }
 
   if (listKey === 'roles' && action === '수정') {
-    navigate('/roles/new');
+    navigate(`/roles/new?index=${rowIndex}`);
     return;
   }
 
-  navigate(getActionPath(listKey));
+  const path = getActionPath(listKey, action);
+  navigate(`${path}?index=${rowIndex}`);
 }
 
-function getActionPath(listKey) {
+function getActionPath(listKey, action) {
   const paths = {
     users: '/users/detail',
     roles: '/roles/detail',
@@ -88,6 +102,20 @@ function getActionPath(listKey) {
     codes: '/codes/new',
     logs: '/logs',
   };
+
+  if (['수정', '상세'].includes(action)) {
+    const editPaths = {
+      menus: '/menus/edit',
+      notices: '/notices/new',
+      boards: '/boards/new',
+      posts: '/posts/new',
+      reservations: '/reservations/approve',
+      templates: '/templates/new',
+      tasks: '/tasks/new',
+      codes: '/codes/new',
+    };
+    return editPaths[listKey] ?? paths[listKey] ?? '/';
+  }
 
   return paths[listKey] ?? '/';
 }

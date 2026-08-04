@@ -3,7 +3,11 @@ import { useApp } from '../context/AppContext.jsx';
 
 function ScheduleList() {
   const { schedules } = useApp();
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 6, 1));
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const today = new Date();
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const days = useMemo(() => {
@@ -41,7 +45,7 @@ function ScheduleList() {
         ))}
         {days.map((item) => (
           <button
-            className={item.day === 28 && year === 2026 && month === 6 ? 'today' : ''}
+            className={item.day === today.getDate() && year === today.getFullYear() && month === today.getMonth() ? 'today' : ''}
             type="button"
             key={item.key}
             disabled={item.empty}

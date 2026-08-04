@@ -5,10 +5,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import  java.util.List;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -21,7 +23,7 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private Long user_id;
+    private Long userId;
 
     @Column(name = "login_id", nullable = false, unique = true, length = 50)
     private String loginId;
@@ -32,13 +34,14 @@ public class User {
     @Column(name = "user_name", nullable = false, length = 50)
     private String userName;
 
-    @Column(name = "email", nullable = false, length = 100)
+    @Column(name = "email", length = 100)
     private String email;
 
     @Column(name = "phone", length = 20)
     private String phone;
 
     @Column(name = "use_yn", nullable = false, length = 1)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String useYn;
 
     @Column(name = "created_at", nullable = false)
@@ -47,7 +50,7 @@ public class User {
     @Column(name = "created_by")
     private Long createdBy;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @Column(name = "updated_by")
@@ -86,10 +89,17 @@ public class User {
             String useYn,
             Long updatedBy
     ) {
-        this.userName = userName;
+        if (userName != null) {
+            this.userName = userName;
+        }
+
         this.email = email;
         this.phone = phone;
-        this.useYn = useYn;
+
+        if (useYn != null) {
+            this.useYn = useYn;
+        }
+
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }
@@ -110,6 +120,10 @@ public class User {
     public void prePersist() {
         if(createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+
+        if(updatedAt == null) {
+            updatedAt = createdAt;
         }
 
         if(useYn == null) {

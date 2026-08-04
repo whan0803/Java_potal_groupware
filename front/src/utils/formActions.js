@@ -1,4 +1,10 @@
-const today = '2026-07-28';
+const getToday = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export const formTargets = {
   userRegister: { listKey: 'users', redirectTo: '/users' },
@@ -15,7 +21,8 @@ export const formTargets = {
   codeRegister: { listKey: 'codes', redirectTo: '/codes' },
 };
 
-export function buildRow(formKey, values, rowCount) {
+export function buildRow(formKey, values, rowCount, existingRow = null) {
+  const today = getToday();
   const number = String(rowCount + 1);
   const get = (label, fallback) => values[label]?.trim() || fallback;
 
@@ -28,7 +35,7 @@ export function buildRow(formKey, values, rowCount) {
       get('이메일', `user${number}@co.kr`),
       '0회',
       get('사용여부', '사용'),
-      today,
+      existingRow?.[7] ?? today,
       '보기',
     ],
     roleRegister: () => [
@@ -38,7 +45,7 @@ export function buildRow(formKey, values, rowCount) {
       get('설명', '사용자 정의 권한'),
       '0명',
       get('사용여부', '사용'),
-      today,
+      existingRow?.[6] ?? today,
       '수정',
     ],
     menuEdit: () => [
@@ -53,10 +60,10 @@ export function buildRow(formKey, values, rowCount) {
       number,
       get('중요 공지 여부', '일반'),
       get('제목', '신규 공지사항'),
-      '홍길동',
+      existingRow?.[3] ?? '홍길동',
       `${get('게시 시작일', today)} ~ ${get('게시 종료일', today)}`,
-      '0',
-      today,
+      existingRow?.[5] ?? '0',
+      existingRow?.[6] ?? today,
       '수정',
     ],
     boardRegister: () => [
@@ -71,10 +78,10 @@ export function buildRow(formKey, values, rowCount) {
       number,
       get('게시판 ID', '공지 게시판'),
       get('제목', '신규 게시글'),
-      '홍길동',
-      '0',
-      today,
-      '사용',
+      existingRow?.[3] ?? '홍길동',
+      existingRow?.[4] ?? '0',
+      existingRow?.[5] ?? today,
+      get('사용여부', existingRow?.[6] ?? '사용'),
       '상세',
     ],
     reservationRegister: () => [
@@ -86,19 +93,19 @@ export function buildRow(formKey, values, rowCount) {
       get('예약일', today),
       `${get('시작 시간', '09:00')}~${get('종료 시간', '10:00')}`,
       get('사용 목적', '예약 목적'),
-      '대기',
+      existingRow?.[8] ?? '대기',
       '상세',
     ],
     taskRegister: () => [
       number,
       get('업무 제목', '신규 업무'),
       get('담당자', '홍길동'),
-      'IT기획팀',
+      existingRow?.[3] ?? 'IT기획팀',
       get('마감일', today),
-      '예정',
-      '0%',
-      '-',
-      '수정',
+      existingRow?.[5] ?? '예정',
+      existingRow?.[6] ?? '0%',
+      existingRow?.[7] ?? '-',
+      existingRow?.[8] ?? '수정',
     ],
     templateRegister: () => [
       number,

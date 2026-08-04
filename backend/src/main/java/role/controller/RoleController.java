@@ -1,9 +1,10 @@
-package menu.controller;
+package role.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import menu.dto.*;
-import menu.service.RoleService;
+import role.dto.*;
+import role.service.RoleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

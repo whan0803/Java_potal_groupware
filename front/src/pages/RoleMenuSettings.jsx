@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useApp } from '../context/AppContext.jsx';
 
 const initialRows = [
   { name: '사용자 목록', url: '/users/list', read: true, create: true, update: true, delete: true },
@@ -24,8 +26,16 @@ const permissionKeys = [
 ];
 
 function RoleMenuSettings() {
-  const [role, setRole] = useState('ROLE_ADMIN');
-  const [rows, setRows] = useState(initialRows);
+  const { lists, roleMenus, saveRoleMenus } = useApp();
+  const [searchParams] = useSearchParams();
+  const initialRole = searchParams.get('role') ?? lists.roles.rows[0]?.[1] ?? 'ROLE_ADMIN';
+  const [role, setRole] = useState(initialRole);
+  const [rows, setRows] = useState(roleMenus[initialRole] ?? initialRows);
+
+  const handleRoleChange = (nextRole) => {
+    setRole(nextRole);
+    setRows(roleMenus[nextRole] ?? initialRows);
+  };
 
   const togglePermission = (rowIndex, key) => {
     setRows((current) =>
@@ -38,11 +48,12 @@ function RoleMenuSettings() {
       <div className="role-menu-toolbar">
         <label>
           대상 권한
-          <select value={role} onChange={(event) => setRole(event.target.value)}>
-            <option value="ROLE_ADMIN">시스템 관리자 (ROLE_ADMIN)</option>
-            <option value="ROLE_MANAGER">부서 관리자 (ROLE_MANAGER)</option>
-            <option value="ROLE_USER">일반 사용자 (ROLE_USER)</option>
-            <option value="ROLE_READONLY">읽기 전용 (ROLE_READONLY)</option>
+          <select value={role} onChange={(event) => handleRoleChange(event.target.value)}>
+            {lists.roles.rows.map((roleRow) => (
+              <option value={roleRow[1]} key={roleRow[1]}>
+                {roleRow[2]} ({roleRow[1]})
+              </option>
+            ))}
           </select>
         </label>
       </div>
@@ -80,7 +91,10 @@ function RoleMenuSettings() {
         <button
           className="button primary"
           type="button"
-          onClick={() => window.alert(`${role} 권한별 메뉴 설정이 저장되었습니다.`)}
+          onClick={() => {
+            saveRoleMenus(role, rows);
+            window.alert(`${role} 권한별 메뉴 설정이 저장되었습니다.`);
+          }}
         >
           저장
         </button>
