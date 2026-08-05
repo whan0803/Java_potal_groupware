@@ -8,18 +8,27 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication(scanBasePackages = {
         "com.example.backend",
         "auth",
+        "boards",
         "common",
         "config",
         "menu",
+        "notice",
+        "post",
         "security",
         "user"
 })
 @EntityScan(basePackages = {
+        "boards.entity",
         "menu.entity",
+        "notice.entity",
+        "post.entity",
         "user.entity"
 })
 @EnableJpaRepositories(basePackages = {
+        "boards.repository",
         "menu.repository",
+        "notice.repository",
+        "post.repository",
         "user.repository"
 })
 public class BackendApplication {
