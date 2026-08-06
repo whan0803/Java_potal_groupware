@@ -19,7 +19,7 @@ public class NoticeController {
 
     private final NoticeService noticeService;
 
-    // NOTICE-001, NOTICE-002, NOTICE-008
+
     @GetMapping
     public ResponseEntity<Page<NoticeListResponse>> getNotices(
 
@@ -57,7 +57,7 @@ public class NoticeController {
         return ResponseEntity.ok(result);
     }
 
-    // NOTICE-003 상세 조회
+    // 상세 조회
     @GetMapping("/{noticeId}")
     public ResponseEntity<NoticeDetailResponse> getNotice(
             @PathVariable Long noticeId
@@ -67,7 +67,7 @@ public class NoticeController {
         );
     }
 
-    // NOTICE-004 등록
+    // 등록
     @PostMapping
     public ResponseEntity<Long> createNotice(
             @Valid @RequestBody NoticeCreateRequest request
@@ -84,7 +84,7 @@ public class NoticeController {
                 .body(noticeId);
     }
 
-    // NOTICE-005 수정
+    //수정
     @PutMapping("/{noticeId}")
     public ResponseEntity<Void> updateNotice(
             @PathVariable Long noticeId,
@@ -98,7 +98,7 @@ public class NoticeController {
         return ResponseEntity.noContent().build();
     }
 
-    // NOTICE-006 논리 삭제
+    // 논리 삭제
     @PatchMapping("/{noticeId}/delete")
     public ResponseEntity<Void> deleteNotice(
             @PathVariable Long noticeId,
@@ -112,7 +112,7 @@ public class NoticeController {
         return ResponseEntity.noContent().build();
     }
 
-    // NOTICE-007 중요 공지 설정
+    //중요 공지 설정
     @PatchMapping("/{noticeId}/important")
     public ResponseEntity<Void> changeImportant(
             @PathVariable Long noticeId,

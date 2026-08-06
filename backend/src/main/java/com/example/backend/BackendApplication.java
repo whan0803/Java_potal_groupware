@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         "common",
         "config",
         "menu",
+        "message",
         "notice",
         "post",
         "security",
@@ -20,6 +21,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EntityScan(basePackages = {
         "boards.entity",
         "menu.entity",
+        "message.entity",
         "notice.entity",
         "post.entity",
         "user.entity"
@@ -27,6 +29,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EnableJpaRepositories(basePackages = {
         "boards.repository",
         "menu.repository",
+        "message.repository",
         "notice.repository",
         "post.repository",
         "user.repository"

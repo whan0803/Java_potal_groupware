@@ -23,7 +23,7 @@ public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final UserRepository userRepository;
 
-    // NOTICE-001, NOTICE-002, NOTICE-008
+
     // 목록 조회, 검색, 기간 제어, 페이징
     public Page<NoticeListResponse> getNotices(
             NoticeSearchCondition condition,
@@ -50,7 +50,7 @@ public class NoticeService {
         return notices.map(NoticeListResponse::from);
     }
 
-    // NOTICE-003 상세 조회 및 조회수 증가
+    // 상세 조회 및 조회수 증가
     @Transactional
     public NoticeDetailResponse getNotice(Long noticeId) {
 
