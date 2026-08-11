@@ -5,8 +5,11 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import user.entity.Role;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface RoleRepository extends JpaRepository<Role, Long>, JpaSpecificationExecutor<Role> {
+    Optional<Role> findByRoleCode(String roleCode);
+
     boolean existsByRoleCode(String roleCode);
 
     boolean existsByRoleName(String roleName);

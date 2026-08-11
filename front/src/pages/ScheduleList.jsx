@@ -1,6 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 
+const getScheduleStart = (schedule) =>
+  schedule.startDatetime ?? schedule.start_datetime ?? `${schedule.date ?? ''} ${schedule.time ?? '00:00'}:00`;
+const getScheduleDate = (schedule) => getScheduleStart(schedule).slice(0, 10);
+const getScheduleTime = (schedule) => {
+  if ((schedule.allDayYn ?? schedule.all_day_yn) === 'Y') return '종일';
+  return getScheduleStart(schedule).slice(11, 16) || schedule.time || '';
+};
+const getScheduleTypeLabel = (schedule) => ((schedule.scheduleType ?? schedule.schedule_type) === 'PUBLIC' ? '공용' : '개인');
+
 function ScheduleList() {
   const { schedules } = useApp();
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -19,7 +28,8 @@ function ScheduleList() {
     ];
   }, [year, month]);
   const monthSchedules = schedules.filter((schedule) => {
-    const date = new Date(schedule.date);
+    if ((schedule.useYn ?? schedule.use_yn) === 'N') return false;
+    const date = new Date(getScheduleDate(schedule));
     return date.getFullYear() === year && date.getMonth() === month;
   });
   const moveMonth = (amount) => {
@@ -58,8 +68,9 @@ function ScheduleList() {
         <h2>{month + 1}월 일정 목록</h2>
         {monthSchedules.length ? (
           monthSchedules.map((schedule) => (
-            <p key={`${schedule.title}-${schedule.date}`}>
-              {schedule.title} · {schedule.date} {schedule.time}
+            <p key={`${schedule.title}-${getScheduleStart(schedule)}`}>
+              [{getScheduleTypeLabel(schedule)}] {schedule.title} · {getScheduleDate(schedule)} {getScheduleTime(schedule)}
+              {schedule.location ? ` · ${schedule.location}` : ''}
             </p>
           ))
         ) : (

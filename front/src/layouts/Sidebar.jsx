@@ -25,7 +25,7 @@ function Sidebar() {
         </div>
       </div>
       <nav className="side-nav" aria-label="관리 메뉴">
-        {navGroups.filter((group) => canShowGroup(group, user)).map((group) => (
+        {navGroups.map((group) => (
           <div className="nav-group" key={group.label}>
             {group.path ? (
               <NavLink className={({ isActive }) => `nav-parent ${isActive ? 'active' : ''}`} to={group.path} end>
@@ -74,11 +74,6 @@ function getActiveGroup(pathname) {
 
 function isActiveGroup(group, pathname) {
   return group.children?.some(([, path]) => path === pathname);
-}
-
-function canShowGroup(group, user) {
-  if (user?.role === '시스템 관리자') return true;
-  return ['대시보드', '공지사항', '업무 관리', '일정 관리', '쪽지'].includes(group.label);
 }
 
 export default Sidebar;

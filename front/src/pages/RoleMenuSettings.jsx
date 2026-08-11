@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
+import { api } from '../services/api.js';
+import { getCurrentUserId } from '../services/backendAdapters.js';
 
 const initialRows = [
   { name: '사용자 목록', url: '/users/list', read: true, create: true, update: true, delete: true },
@@ -26,11 +28,33 @@ const permissionKeys = [
 ];
 
 function RoleMenuSettings() {
-  const { lists, roleMenus, saveRoleMenus } = useApp();
+  const { user, lists, roleMenus, apiStatus, saveRoleMenus } = useApp();
   const [searchParams] = useSearchParams();
   const initialRole = searchParams.get('role') ?? lists.roles.rows[0]?.[1] ?? 'ROLE_ADMIN';
   const [role, setRole] = useState(initialRole);
   const [rows, setRows] = useState(roleMenus[initialRole] ?? initialRows);
+  const [error, setError] = useState('');
+
+  const selectedRoleRow = lists.roles.rows.find((roleRow) => roleRow[1] === role);
+  const selectedRoleId = selectedRoleRow?._meta?.roleId;
+
+  useEffect(() => {
+    if (!apiStatus.connected || !selectedRoleId) return;
+    api.get(`/api/roles/${selectedRoleId}/menus`)
+      .then((items) => {
+        setRows(items.map((item) => ({
+          menuId: item.menuId,
+          name: item.menuName,
+          url: item.menuUrl ?? '',
+          read: item.readYn === 'Y',
+          create: item.createYn === 'Y',
+          update: item.updateYn === 'Y',
+          delete: item.deleteYn === 'Y',
+        })));
+        setError('');
+      })
+      .catch((fetchError) => setError(fetchError.message || '권한별 메뉴를 불러오지 못했습니다.'));
+  }, [apiStatus.connected, selectedRoleId]);
 
   const handleRoleChange = (nextRole) => {
     setRole(nextRole);
@@ -91,14 +115,35 @@ function RoleMenuSettings() {
         <button
           className="button primary"
           type="button"
-          onClick={() => {
-            saveRoleMenus(role, rows);
-            window.alert(`${role} 권한별 메뉴 설정이 저장되었습니다.`);
+          onClick={async () => {
+            try {
+              if (apiStatus.connected && selectedRoleId) {
+                await api.put(`/api/roles/${selectedRoleId}/menus`, {
+                  userId: getCurrentUserId(user),
+                  menus: rows
+                    .filter((row) => row.menuId)
+                    .map((row) => ({
+                      menuId: row.menuId,
+                      readYn: row.read ? 'Y' : 'N',
+                      createYn: row.create ? 'Y' : 'N',
+                      updateYn: row.update ? 'Y' : 'N',
+                      deleteYn: row.delete ? 'Y' : 'N',
+                    })),
+                });
+              } else {
+                saveRoleMenus(role, rows);
+              }
+              setError('');
+              window.alert(`${role} 권한별 메뉴 설정이 저장되었습니다.`);
+            } catch (saveError) {
+              setError(saveError.message || '저장 중 오류가 발생했습니다.');
+            }
           }}
         >
           저장
         </button>
       </div>
+      {error ? <p className="form-error">{error}</p> : null}
     </section>
   );
 }

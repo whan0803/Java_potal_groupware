@@ -14,6 +14,10 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
 
     List<Menu> findAllByOrderByMenuLevelAscSortOrderAsc();
 
+    List<Menu> findByUseYnOrderByMenuLevelAscSortOrderAsc(
+            String useYn
+    );
+
     boolean existsByParentMenuMenuIdAndUseYn(
             Long parentMenuId,
             String useYn

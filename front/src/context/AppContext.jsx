@@ -1,5 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { listScreens } from '../data/listScreens.js';
+import { authApi } from '../services/api.js';
+import {
+  deleteBackendRow,
+  fetchBackendState,
+  saveFormToBackend,
+  updateBackendStatus,
+} from '../services/backendAdapters.js';
 import { loadStorage, saveStorage } from '../utils/storage.js';
 
 const AppContext = createContext(null);
@@ -36,22 +43,62 @@ const initialRoleMenus = {
   ],
 };
 
+const toUserSession = (response) => ({
+  userId: response.userId,
+  id: response.loginId,
+  name: response.userName,
+  role: response.roles?.[0] ?? '사용자',
+  roles: response.roles ?? [],
+});
+
 export function AppProvider({ children }) {
-  const [user, setUser] = useState(() => loadStorage('user', null));
+  const [user, setUser] = useState(null);
   const [accounts, setAccounts] = useState(() => loadStorage('accounts', initialAccounts));
   const [lists, setLists] = useState(() => loadStorage('lists', listScreens));
   const [schedules, setSchedules] = useState(() => loadStorage('schedules', []));
   const [messages, setMessages] = useState(() => loadStorage('messages', initialMessages));
   const [sentMessages, setSentMessages] = useState(() => loadStorage('sentMessages', initialSentMessages));
   const [roleMenus, setRoleMenus] = useState(() => loadStorage('roleMenus', initialRoleMenus));
+  const [resources, setResources] = useState(() => loadStorage('resources', []));
+  const [dashboard, setDashboard] = useState(null);
+  const [permissions, setPermissions] = useState([]);
+  const [apiStatus, setApiStatus] = useState({ connected: false, loading: false, error: '' });
 
-  useEffect(() => saveStorage('user', user), [user]);
+  useEffect(() => {
+    window.localStorage.removeItem('groupware-admin:user');
+  }, []);
   useEffect(() => saveStorage('accounts', accounts), [accounts]);
   useEffect(() => saveStorage('lists', lists), [lists]);
   useEffect(() => saveStorage('schedules', schedules), [schedules]);
   useEffect(() => saveStorage('messages', messages), [messages]);
   useEffect(() => saveStorage('sentMessages', sentMessages), [sentMessages]);
   useEffect(() => saveStorage('roleMenus', roleMenus), [roleMenus]);
+  useEffect(() => saveStorage('resources', resources), [resources]);
+
+  const refreshBackendState = async () => {
+    if (!user) return;
+    setApiStatus((current) => ({ ...current, loading: true, error: '' }));
+    try {
+      const session = await authApi.me();
+      const sessionUser = toUserSession(session);
+      setUser(sessionUser);
+      const state = await fetchBackendState(sessionUser);
+      setLists((current) => ({ ...current, ...state.lists, logs: current.logs }));
+      setSchedules(state.schedules);
+      setMessages(state.messages);
+      setSentMessages(state.sentMessages);
+      setResources(state.resources);
+      setDashboard(state.dashboard);
+      setPermissions(state.permissions);
+      setApiStatus({ connected: true, loading: false, error: '' });
+    } catch (error) {
+      setApiStatus({ connected: false, loading: false, error: error.message });
+    }
+  };
+
+  useEffect(() => {
+    refreshBackendState();
+  }, [user?.userId, user?.id]);
 
   const writeAuditLog = (tableName, actionType, detail) => {
     setLists((current) => {
@@ -77,7 +124,21 @@ export function AppProvider({ children }) {
     });
   };
 
-  const login = ({ id, password }) => {
+  const login = async ({ id, password }) => {
+    try {
+      const response = await authApi.login({ id, password });
+      const session = await authApi.me();
+      setUser(toUserSession(session));
+      setApiStatus({ connected: true, loading: false, error: '' });
+      return { ok: true };
+    } catch (error) {
+      setUser(null);
+      setApiStatus({ connected: false, loading: false, error: error.message });
+      return { ok: false, message: error.message || '로그인에 실패했습니다.' };
+    }
+  };
+
+  const localLogin = ({ id, password }) => {
     const account = accounts.find((item) => item.id === id);
     if (!account) return { ok: false, message: '존재하지 않는 사용자입니다.' };
     if (account.password !== password) return { ok: false, message: '비밀번호가 일치하지 않습니다.' };
@@ -87,8 +148,17 @@ export function AppProvider({ children }) {
     return { ok: true };
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    if (apiStatus.connected) {
+      try {
+        await authApi.logout();
+      } catch {
+        // The local session should still be cleared even if the server session is already gone.
+      }
+    }
+      setUser(null);
+      setDashboard(null);
+      setPermissions([]);
   };
 
   const changePassword = ({ currentPassword, nextPassword, confirmPassword }) => {
@@ -144,7 +214,13 @@ export function AppProvider({ children }) {
     writeAuditLog(listKey, 'UPDATE', `${listKey} 데이터 수정`);
   };
 
-  const updateRowStatus = (listKey, rowIndex, status = '미사용') => {
+  const updateRowStatus = async (listKey, rowIndex, status = '미사용') => {
+    const row = lists[listKey]?.rows[rowIndex];
+    if (apiStatus.connected && row?._meta) {
+      await updateBackendStatus(listKey, row, status, user);
+      await refreshBackendState();
+      return;
+    }
     setLists((current) => {
       const target = current[listKey];
       if (!target) return current;
@@ -163,8 +239,13 @@ export function AppProvider({ children }) {
     writeAuditLog(listKey, 'UPDATE', `${listKey} 상태 변경`);
   };
 
-  const removeRow = (listKey, rowIndex) => {
+  const removeRow = async (listKey, rowIndex) => {
     const removedRow = lists[listKey]?.rows[rowIndex];
+    if (apiStatus.connected && removedRow?._meta) {
+      await deleteBackendRow(listKey, removedRow, user);
+      await refreshBackendState();
+      return;
+    }
     setLists((current) => {
       const target = current[listKey];
       if (!target) return current;
@@ -208,6 +289,22 @@ export function AppProvider({ children }) {
     writeAuditLog('role_menus', 'UPDATE', `${roleCode} 권한별 메뉴 설정`);
   };
 
+  const saveFormRecord = async (formKey, values, options = {}) => {
+    if (apiStatus.connected) {
+      await saveFormToBackend(formKey, values, {
+        user,
+        lists,
+        resources,
+        editingRow: options.editingRow,
+        selectedChip: options.selectedChip,
+        selectedRoles: options.selectedRoles ?? [],
+      });
+      await refreshBackendState();
+      return;
+    }
+    throw new Error('백엔드에 연결되어 있지 않습니다.');
+  };
+
   const value = useMemo(
     () => ({
       user,
@@ -216,7 +313,12 @@ export function AppProvider({ children }) {
       messages,
       sentMessages,
       roleMenus,
+      resources,
+      dashboard,
+      permissions,
+      apiStatus,
       login,
+      localLogin,
       logout,
       changePassword,
       addListRow,
@@ -227,8 +329,10 @@ export function AppProvider({ children }) {
       addMessage,
       upsertAccount,
       saveRoleMenus,
+      saveFormRecord,
+      refreshBackendState,
     }),
-    [user, accounts, lists, schedules, messages, sentMessages, roleMenus],
+    [user, accounts, lists, schedules, messages, sentMessages, roleMenus, resources, dashboard, permissions, apiStatus],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

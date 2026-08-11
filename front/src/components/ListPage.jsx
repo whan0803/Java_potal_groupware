@@ -1,14 +1,18 @@
 import DataTable from './DataTable.jsx';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
+import { canUsePermission, isAdminUser } from '../utils/permissions.js';
 
 function ListPage({ listKey }) {
   const navigate = useNavigate();
-  const { lists, updateRowStatus, removeRow } = useApp();
+  const { pathname } = useLocation();
+  const { user, permissions, lists, updateRowStatus, removeRow } = useApp();
   const config = lists[listKey];
   const [activeTab, setActiveTab] = useState(0);
   const [query, setQuery] = useState('');
+  const canUpdate = canUsePermission(user, permissions, pathname, 'update');
+  const canDelete = canUsePermission(user, permissions, pathname, 'delete');
   const filteredRows = useMemo(() => {
     const rows = filterRowsByTab(config, activeTab);
     if (!query.trim()) return rows;
@@ -45,13 +49,26 @@ function ListPage({ listKey }) {
         columns={config.columns}
         rows={filteredRows}
         listKey={listKey}
-        onAction={(row, action) => {
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        canEditRow={(row) => canEditRow({ listKey, row, user })}
+        onAction={async (row, action) => {
           const rowIndex = config.rows.indexOf(row);
-          handleTableAction({ listKey, action, rowIndex, navigate, updateRowStatus, removeRow });
+          try {
+            await handleTableAction({ listKey, action, rowIndex, navigate, updateRowStatus, removeRow });
+          } catch (error) {
+            window.alert(error.message || '처리 중 오류가 발생했습니다.');
+          }
         }}
       />
     </section>
   );
+}
+
+function canEditRow({ listKey, row, user }) {
+  if (listKey !== 'tasks') return true;
+  if (isAdminUser(user)) return true;
+  return Number(row?._meta?.requesterId) === Number(user?.userId);
 }
 
 function filterRowsByTab(config, activeTab) {
@@ -66,14 +83,14 @@ function filterRowsByTab(config, activeTab) {
   return config.rows;
 }
 
-function handleTableAction({ listKey, action, rowIndex, navigate, updateRowStatus, removeRow }) {
+async function handleTableAction({ listKey, action, rowIndex, navigate, updateRowStatus, removeRow }) {
   if (action === '삭제') {
-    removeRow(listKey, rowIndex);
+    await removeRow(listKey, rowIndex);
     return;
   }
 
   if (['결재 처리', '승인 / 반려'].includes(action)) {
-    updateRowStatus(listKey, rowIndex, '완료');
+    await updateRowStatus(listKey, rowIndex, '완료');
     window.alert('처리되었습니다.');
     return;
   }

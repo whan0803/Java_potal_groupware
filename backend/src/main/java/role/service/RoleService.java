@@ -2,10 +2,10 @@ package role.service;
 
 import lombok.RequiredArgsConstructor;
 import menu.dto.*;
+import menu.entity.Menu;
+import menu.repository.MenuRepository;
 import role.dto.*;
-import role.entity.Menu;
 import role.entity.RoleMenu;
-import role.repository.MenuRepository;
 import role.repository.RoleMenuRepository;
 import role.repository.RoleRepository;
 import org.springframework.data.jpa.domain.Specification;

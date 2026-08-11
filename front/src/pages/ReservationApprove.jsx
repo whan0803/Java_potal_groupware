@@ -22,12 +22,16 @@ function ReservationApprove() {
           row[8],
           row[8] === '대기' ? '승인 / 반려' : '처리 완료',
         ])}
-        onAction={(row) => {
+        onAction={async (row) => {
           if (row[8] !== '대기') return;
           const rowIndex = lists.reservations.rows.findIndex((reservation) => reservation[0] === row[7]);
           if (rowIndex < 0) return;
-          window.alert('예약이 승인 처리되었습니다.');
-          updateRowStatus('reservations', rowIndex, '승인');
+          try {
+            await updateRowStatus('reservations', rowIndex, '승인');
+            window.alert('예약이 승인 처리되었습니다.');
+          } catch (error) {
+            window.alert(error.message || '처리 중 오류가 발생했습니다.');
+          }
         }}
       />
     </section>

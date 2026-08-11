@@ -45,8 +45,8 @@ export const formScreens = {
     fields: ['양식 코드 *', '양식명 *', '설명', '기본 내용', '사용여부'],
   },
   scheduleRegister: {
-    width: 'narrow',
-    fields: ['제목 *', '내용', '시작일', '시작 시간', '종료일', '종료 시간', '일정 색상'],
+    width: 'medium',
+    fields: ['일정 유형 *', '제목 *', '내용', '장소', '시작일 *', '시작 시간', '종료일 *', '종료 시간', '종일 일정 여부', '사용여부'],
   },
   messageCompose: {
     width: 'medium',

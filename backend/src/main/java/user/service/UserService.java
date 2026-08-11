@@ -8,6 +8,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import role.repository.RoleRepository;
 import user.dto.DuplicateCheckResponse;
 import user.dto.UserCreateRequest;
 import user.dto.UserResponse;
@@ -16,7 +17,6 @@ import user.dto.UserUpdateRequest;
 import user.entity.Role;
 import user.entity.User;
 import user.entity.UserRole;
-import user.repository.RoleRepository;
 import user.repository.UserRepository;
 import user.repository.UserRoleRepository;
 

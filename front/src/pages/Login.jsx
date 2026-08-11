@@ -10,9 +10,9 @@ function Login() {
 
   if (user) return <Navigate to="/" replace />;
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = login(values);
+    const result = await login(values);
     if (!result.ok) {
       setError(result.message);
       return;
@@ -31,7 +31,6 @@ function Login() {
           아이디
           <input
             value={values.id}
-            placeholder="admin"
             onChange={(event) => setValues((current) => ({ ...current, id: event.target.value }))}
           />
         </label>
@@ -40,7 +39,6 @@ function Login() {
           <input
             type="password"
             value={values.password}
-            placeholder="admin123"
             onChange={(event) => setValues((current) => ({ ...current, password: event.target.value }))}
           />
         </label>

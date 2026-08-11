@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { buildRow, formTargets } from '../utils/formActions.js';
+import { canUsePermission } from '../utils/permissions.js';
 import RoleSelectModal from './RoleSelectModal.jsx';
 
 const selectOptions = {
   사용여부: ['사용', '미사용'],
   '중요 공지 여부': ['일반', '중요'],
   '첨부파일 허용 여부': ['허용', '미허용'],
+  '일정 유형': ['PERSONAL', 'PUBLIC'],
+  '종일 일정 여부': ['아니오', '예'],
 };
 
 const dateFields = new Set(['게시 시작일', '게시 종료일', '예약일', '마감일', '시작일', '종료일']);
@@ -19,11 +22,45 @@ const getToday = () => {
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
+const getNowDatetime = () => {
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('-');
+  const time = [
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+  ].join(':');
+  return `${date}T${time}:00`;
+};
+const toYn = (value, yesLabel = '예') => (value === yesLabel || value === 'Y' || value === '사용' ? 'Y' : 'N');
+const getCurrentUserId = (user, lists) => {
+  const numericId = Number(user?.user_id ?? user?.userId);
+  if (Number.isInteger(numericId)) return numericId;
+  const rowId = lists.users.rows.find((row) => row[1] === user?.id)?.[0];
+  const parsedRowId = Number(rowId);
+  return Number.isInteger(parsedRowId) ? parsedRowId : 1;
+};
+const buildDatetime = (date, time, fallbackTime) => `${date || getToday()}T${time || fallbackTime}:00`;
 
 function FormPage({ formKey, config }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
-  const { user, lists, addListRow, updateListRow, addSchedule, addMessage, upsertAccount } = useApp();
+  const {
+    user,
+    lists,
+    permissions,
+    apiStatus,
+    addListRow,
+    updateListRow,
+    addSchedule,
+    addMessage,
+    upsertAccount,
+    saveFormRecord,
+  } = useApp();
   const fields = config.fields ?? [];
   const target = formTargets[formKey];
   const editIndex = Number.parseInt(searchParams.get('index') ?? '', 10);
@@ -40,7 +77,7 @@ function FormPage({ formKey, config }) {
     setValues((current) => ({ ...current, [label]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const validation = validateForm(config, values, lists, { formKey, editingRow, selectedChip });
     if (!validation.ok) {
@@ -49,6 +86,24 @@ function FormPage({ formKey, config }) {
     }
 
     if (!target) return;
+
+    const permissionAction = editingRow ? 'update' : 'create';
+    if (!canUsePermission(user, permissions, pathname, permissionAction)) {
+      setError(editingRow ? '수정 권한이 없습니다.' : '등록 권한이 없습니다.');
+      return;
+    }
+
+    if (apiStatus.connected) {
+      try {
+        await saveFormRecord(formKey, values, { editingRow, selectedChip, selectedRoles });
+        setError('');
+        window.alert(config.action === '보내기' ? '발송 완료' : '저장되었습니다.');
+        navigate(target.redirectTo);
+      } catch (error) {
+        setError(error.message || '저장 중 오류가 발생했습니다.');
+      }
+      return;
+    }
 
     if (target.listKey) {
       const sourceValues = { ...values, '예약 유형': selectedChip };
@@ -74,10 +129,20 @@ function FormPage({ formKey, config }) {
     }
 
     if (formKey === 'scheduleRegister') {
+      const allDayYn = toYn(values['종일 일정 여부']);
+      const userId = getCurrentUserId(user, lists);
       addSchedule({
+        userId,
         title: values.제목 || '신규 일정',
-        date: values.시작일 || getToday(),
-        time: values['시작 시간'] || '09:00',
+        content: values.내용 || '',
+        location: values.장소 || '',
+        scheduleType: values['일정 유형'] || 'PERSONAL',
+        startDatetime: buildDatetime(values.시작일, allDayYn === 'Y' ? '00:00' : values['시작 시간'], '09:00'),
+        endDatetime: buildDatetime(values.종료일, allDayYn === 'Y' ? '23:59' : values['종료 시간'], '10:00'),
+        allDayYn,
+        useYn: values.사용여부 === '미사용' ? 'N' : 'Y',
+        createdAt: getNowDatetime(),
+        createdBy: userId,
       });
     }
 
@@ -257,6 +322,14 @@ function validateForm(config, values, lists, options = {}) {
   }
   if (values.시작일 && values.종료일 && values.종료일 < values.시작일) {
     return { ok: false, message: '종료일은 시작일보다 이전일 수 없습니다.' };
+  }
+  if (options.formKey === 'scheduleRegister' && values.시작일 && values.종료일 && values.종료일 === values.시작일) {
+    const isAllDay = toYn(values['종일 일정 여부']) === 'Y';
+    const startTime = isAllDay ? '00:00' : values['시작 시간'];
+    const endTime = isAllDay ? '23:59' : values['종료 시간'];
+    if (startTime && endTime && endTime < startTime) {
+      return { ok: false, message: '종료 시간은 시작 시간보다 이전일 수 없습니다.' };
+    }
   }
   if (options.formKey === 'reservationRegister') {
     const conflict = lists.reservations.rows.some((row) => {

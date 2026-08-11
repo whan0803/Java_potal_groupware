@@ -1,13 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
+import { useApp } from '../context/AppContext.jsx';
 import { pageActions, pageMeta } from '../data/navigation.js';
+import { canUsePermission } from '../utils/permissions.js';
 
 function PageHeader() {
   const { pathname, search } = useLocation();
+  const { user, permissions } = useApp();
   const meta = pageMeta[pathname] ?? pageMeta['/'];
   const crumbs = meta.slice(0, -1);
   const title = meta.at(-1);
   const action = pageActions[pathname];
+  const canCreate = canUsePermission(user, permissions, pathname, 'create');
+  const canUpdate = canUsePermission(user, permissions, pathname, 'update');
 
   return (
     <section className="page-header">
@@ -29,13 +34,15 @@ function PageHeader() {
               <Icon index={20} size={12.25} />
               목록
             </Link>
-            <Link className="button primary" to={`/users/new${search}`}>
-              <Icon index={21} size={12.25} />
-              수정
-            </Link>
+            {canUpdate ? (
+              <Link className="button primary" to={`/users/new${search}`}>
+                <Icon index={21} size={12.25} />
+                수정
+              </Link>
+            ) : null}
           </>
         ) : null}
-        {action ? (
+        {action && canCreate ? (
           <Link className="button primary" to={action[1]}>
             {action[0]}
           </Link>

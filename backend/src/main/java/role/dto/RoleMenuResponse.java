@@ -1,6 +1,6 @@
 package role.dto;
 
-import role.entity.Menu;
+import menu.entity.Menu;
 import role.entity.RoleMenu;
 
 public record RoleMenuResponse(
@@ -22,9 +22,9 @@ public record RoleMenuResponse(
     ) {
         return new RoleMenuResponse(
                 menu.getMenuId(),
-                menu.getParentMenuId() == null
+                menu.getParentMenu() == null
                         ? null
-                        : menu.getParentMenuId().getMenuId(),
+                        : menu.getParentMenu().getMenuId(),
                 menu.getMenuName(),
                 menu.getMenuUrl(),
                 menu.getMenuLevel(),

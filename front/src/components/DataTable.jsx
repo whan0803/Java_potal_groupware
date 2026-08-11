@@ -7,20 +7,25 @@ function renderCell(cell, options = {}) {
         <button className="table-action" type="button" onClick={() => options.onAction('보기')}>
           보기
         </button>
-        <button className="table-action" type="button" onClick={() => options.onAction('수정')}>
-          수정
-        </button>
+        {options.canUpdate ? (
+          <button className="table-action" type="button" onClick={() => options.onAction('수정')}>
+            수정
+          </button>
+        ) : null}
       </span>
     );
   }
 
   if (options.isAction) {
+    const primaryAction = options.canUpdate || ['보기', '상세', '처리 완료'].includes(cell);
     if (options.canDelete) {
       return (
         <span className="role-action-group">
-          <button className="table-action" type="button" onClick={options.onAction}>
-            {cell}
-          </button>
+          {primaryAction ? (
+            <button className="table-action" type="button" onClick={options.onAction}>
+              {cell}
+            </button>
+          ) : null}
           <button className="table-action danger" type="button" onClick={() => options.onAction('삭제')}>
             삭제
           </button>
@@ -28,10 +33,12 @@ function renderCell(cell, options = {}) {
       );
     }
 
-    return (
+    return primaryAction ? (
       <button className="table-action" type="button" onClick={options.onAction}>
         {cell}
       </button>
+    ) : (
+      <span className="muted-cell">읽기 전용</span>
     );
   }
 
@@ -51,7 +58,7 @@ function renderCell(cell, options = {}) {
   return cell;
 }
 
-function DataTable({ columns, rows, onAction, listKey }) {
+function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDelete = true, canEditRow }) {
   const actionColumnIndex = columns.findIndex((column) => ['관리', '처리'].includes(column));
 
   return (
@@ -72,7 +79,8 @@ function DataTable({ columns, rows, onAction, listKey }) {
                   {renderCell(cell, {
                     isRoleAction: listKey === 'roles' && cellIndex === actionColumnIndex,
                     isAction: cellIndex === actionColumnIndex,
-                    canDelete: canDeleteRow(listKey, cell),
+                    canUpdate: canUpdate && (canEditRow?.(row) ?? true),
+                    canDelete: canDelete && (canEditRow?.(row) ?? true) && canDeleteRow(listKey, cell),
                     onAction: (actionValue = cell) => onAction?.(row, actionValue),
                   })}
                 </td>
