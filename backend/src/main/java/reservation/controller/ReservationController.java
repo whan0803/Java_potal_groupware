@@ -37,6 +37,15 @@ public class ReservationController {
 
     }
 
+    @PostMapping("/resources")
+    public ResponseEntity<Long> createResource(
+            @Valid @RequestBody ResourceCreateRequest request
+    ) {
+        return ResponseEntity.ok(
+                service.createResource(request)
+        );
+    }
+
 
 
     // 예약현황

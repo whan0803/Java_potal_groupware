@@ -11,6 +11,7 @@ function PageHeader() {
   const crumbs = meta.slice(0, -1);
   const title = meta.at(-1);
   const action = pageActions[pathname];
+  const actions = Array.isArray(action?.[0]) ? action : action ? [action] : [];
   const canCreate = canUsePermission(user, permissions, pathname, 'create');
   const canUpdate = canUsePermission(user, permissions, pathname, 'update');
 
@@ -42,11 +43,13 @@ function PageHeader() {
             ) : null}
           </>
         ) : null}
-        {action && canCreate ? (
-          <Link className="button primary" to={action[1]}>
-            {action[0]}
-          </Link>
-        ) : null}
+        {canCreate
+          ? actions.map(([label, to], index) => (
+              <Link className={index === 0 ? 'button primary' : 'button secondary'} to={to} key={to}>
+                {label}
+              </Link>
+            ))
+          : null}
       </div>
     </section>
   );

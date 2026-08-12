@@ -7,6 +7,12 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 public record ReservationUpdateRequest(
+        Long resourceId,
+
+        String resourceName,
+
+        String resourceType,
+
         @NotBlank(message = "예약 제목은 필수입니다.")
         @Size(max = 200, message = "예약 제목은 200자 이하여야 합니다.")
         String title,

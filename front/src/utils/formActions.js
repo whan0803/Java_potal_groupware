@@ -14,6 +14,7 @@ export const formTargets = {
   boardRegister: { listKey: 'boards', redirectTo: '/boards' },
   postRegister: { listKey: 'posts', redirectTo: '/posts' },
   reservationRegister: { listKey: 'reservations', redirectTo: '/reservations' },
+  resourceRegister: { redirectTo: '/reservations' },
   templateRegister: { listKey: 'templates', redirectTo: '/templates' },
   taskRegister: { listKey: 'tasks', redirectTo: '/tasks' },
   scheduleRegister: { redirectTo: '/schedule' },

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import role.repository.RoleRepository;
 import user.dto.DuplicateCheckResponse;
+import user.dto.PasswordChangeRequest;
 import user.dto.UserCreateRequest;
 import user.dto.UserResponse;
 import user.dto.UserRoleUpdateRequest;
@@ -240,6 +241,43 @@ public class UserService {
                     actorId
             );
         }
+
+        if (request.getPassword() != null
+                && !request.getPassword().isBlank()) {
+            user.changePassword(
+                    passwordEncoder.encode(request.getPassword()),
+                    actorId
+            );
+        }
+    }
+
+    // 로그인 사용자의 비밀번호 변경
+    @Transactional
+    public void changePassword(
+            Long userId,
+            PasswordChangeRequest request
+    ) {
+        User user = findUser(userId);
+
+        if (!request.nextPassword().equals(request.confirmPassword())) {
+            throw new IllegalArgumentException(
+                    "새 비밀번호와 비밀번호 확인이 다릅니다."
+            );
+        }
+
+        if (!passwordEncoder.matches(
+                request.currentPassword(),
+                user.getPassword()
+        )) {
+            throw new IllegalArgumentException(
+                    "기존 비밀번호가 일치하지 않습니다."
+            );
+        }
+
+        user.changePassword(
+                passwordEncoder.encode(request.nextPassword()),
+                userId
+        );
     }
 
     // 사용자 사용 중지
@@ -369,6 +407,8 @@ public class UserService {
         userRoleRepository.deleteAllByUserUserId(
                 user.getUserId()
         );
+        userRoleRepository.flush();
+        user.getUserRoles().clear();
 
         if (roles.isEmpty()) {
             return;

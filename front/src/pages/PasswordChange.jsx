@@ -6,9 +6,9 @@ function PasswordChange() {
   const [values, setValues] = useState({ currentPassword: '', nextPassword: '', confirmPassword: '' });
   const [message, setMessage] = useState('');
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = changePassword(values);
+    const result = await changePassword(values);
     setMessage(result.message);
     if (result.ok) setValues({ currentPassword: '', nextPassword: '', confirmPassword: '' });
   };

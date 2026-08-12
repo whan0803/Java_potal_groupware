@@ -2,17 +2,20 @@ import DataTable from './DataTable.jsx';
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
+import { api } from '../services/api.js';
 import { canUsePermission, isAdminUser } from '../utils/permissions.js';
 
 function ListPage({ listKey }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user, permissions, lists, updateRowStatus, removeRow } = useApp();
+  const { user, permissions, lists, updateRowStatus, removeRow, refreshBackendState } = useApp();
   const config = lists[listKey];
   const [activeTab, setActiveTab] = useState(0);
   const [query, setQuery] = useState('');
   const canUpdate = canUsePermission(user, permissions, pathname, 'update');
   const canDelete = canUsePermission(user, permissions, pathname, 'delete');
+  const effectiveCanUpdate = canUpdate || ['tasks', 'reservations'].includes(listKey) || (listKey === 'approval' && isAdminUser(user));
+  const effectiveCanDelete = canDelete || ['tasks', 'reservations'].includes(listKey);
   const filteredRows = useMemo(() => {
     const rows = filterRowsByTab(config, activeTab);
     if (!query.trim()) return rows;
@@ -49,13 +52,13 @@ function ListPage({ listKey }) {
         columns={config.columns}
         rows={filteredRows}
         listKey={listKey}
-        canUpdate={canUpdate}
-        canDelete={canDelete}
+        canUpdate={effectiveCanUpdate}
+        canDelete={effectiveCanDelete}
         canEditRow={(row) => canEditRow({ listKey, row, user })}
         onAction={async (row, action) => {
           const rowIndex = config.rows.indexOf(row);
           try {
-            await handleTableAction({ listKey, action, rowIndex, navigate, updateRowStatus, removeRow });
+            await handleTableAction({ listKey, action, row, rowIndex, user, navigate, updateRowStatus, removeRow, refreshBackendState });
           } catch (error) {
             window.alert(error.message || '처리 중 오류가 발생했습니다.');
           }
@@ -66,8 +69,10 @@ function ListPage({ listKey }) {
 }
 
 function canEditRow({ listKey, row, user }) {
-  if (listKey !== 'tasks') return true;
+  if (!['tasks', 'posts', 'reservations'].includes(listKey)) return true;
   if (isAdminUser(user)) return true;
+  if (listKey === 'posts') return Number(row?._meta?.writerId) === Number(user?.userId);
+  if (listKey === 'reservations') return Number(row?._meta?.requesterId) === Number(user?.userId);
   return Number(row?._meta?.requesterId) === Number(user?.userId);
 }
 
@@ -83,13 +88,27 @@ function filterRowsByTab(config, activeTab) {
   return config.rows;
 }
 
-async function handleTableAction({ listKey, action, rowIndex, navigate, updateRowStatus, removeRow }) {
+async function handleTableAction({ listKey, action, row, rowIndex, user, navigate, updateRowStatus, removeRow, refreshBackendState }) {
   if (action === '삭제') {
     await removeRow(listKey, rowIndex);
     return;
   }
 
-  if (['결재 처리', '승인 / 반려'].includes(action)) {
+  if (listKey === 'approval' && action === '결재 처리') {
+    const approve = window.confirm('승인하려면 확인, 반려하려면 취소를 누르세요.');
+    const comment = approve ? '' : window.prompt('반려 사유를 입력하세요.', '') ?? '';
+    await api.patch(`/api/approvals/${row._meta.approvalDocumentId}/${
+      approve ? 'approve' : 'reject'
+    }`, {
+      approverId: user.userId,
+      comment,
+    });
+    await refreshBackendState();
+    window.alert(approve ? '승인되었습니다.' : '반려되었습니다.');
+    return;
+  }
+
+  if (['승인 / 반려'].includes(action)) {
     await updateRowStatus(listKey, rowIndex, '완료');
     window.alert('처리되었습니다.');
     return;
@@ -97,6 +116,50 @@ async function handleTableAction({ listKey, action, rowIndex, navigate, updateRo
 
   if (listKey === 'roles' && action === '수정') {
     navigate(`/roles/new?index=${rowIndex}`);
+    return;
+  }
+
+  if (listKey === 'tasks' && action === '진행률') {
+    const value = window.prompt('진행률을 0~100 사이 숫자로 입력하세요.', String(row?._meta?.progressRate ?? 0));
+    if (value === null) return;
+    const progressRate = Number(value);
+    if (!Number.isInteger(progressRate) || progressRate < 0 || progressRate > 100) {
+      window.alert('진행률은 0~100 사이 숫자여야 합니다.');
+      return;
+    }
+    await api.patch(`/api/tasks/${row._meta.taskId}/progress`, { progressRate });
+    await refreshBackendState();
+    return;
+  }
+
+  if (listKey === 'tasks' && action === '상태') {
+    const value = window.prompt('상태를 입력하세요: 예정, 진행중, 완료, 보류', row?.[5] ?? '예정');
+    if (value === null) return;
+    if (!['예정', '진행중', '완료', '보류'].includes(value)) {
+      window.alert('상태는 예정, 진행중, 완료, 보류 중 하나여야 합니다.');
+      return;
+    }
+    await updateRowStatus('tasks', rowIndex, value);
+    return;
+  }
+
+  if (listKey === 'reservations' && action === '수정') {
+    navigate(`/reservations/new?index=${rowIndex}`);
+    return;
+  }
+
+  if (listKey === 'reservations' && action === '취소') {
+    await removeRow('reservations', rowIndex);
+    return;
+  }
+
+  if (listKey === 'posts') {
+    navigate(action === '수정' ? `/posts/new?index=${rowIndex}` : `/posts/detail?index=${rowIndex}`);
+    return;
+  }
+
+  if (listKey === 'templates' && action === '상세') {
+    navigate(`/templates/detail?index=${rowIndex}`);
     return;
   }
 

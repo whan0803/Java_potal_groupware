@@ -5,13 +5,17 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { formScreens } from './data/formScreens.js';
 import AppLayout from './layouts/AppLayout.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import ApprovalApply from './pages/ApprovalApply.jsx';
+import ApprovalList from './pages/ApprovalList.jsx';
 import Login from './pages/Login.jsx';
 import MessageInbox from './pages/MessageInbox.jsx';
 import PasswordChange from './pages/PasswordChange.jsx';
+import PostDetail from './pages/PostDetail.jsx';
 import ReservationApprove from './pages/ReservationApprove.jsx';
 import RoleDetail from './pages/RoleDetail.jsx';
 import RoleMenuSettings from './pages/RoleMenuSettings.jsx';
 import ScheduleList from './pages/ScheduleList.jsx';
+import TemplateDetail from './pages/TemplateDetail.jsx';
 import UserDetail from './pages/UserDetail.jsx';
 
 function App() {
@@ -36,12 +40,16 @@ function App() {
         <Route path="boards/new" element={<FormPage formKey="boardRegister" config={formScreens.boardRegister} />} />
         <Route path="posts" element={<ListPage listKey="posts" />} />
         <Route path="posts/new" element={<FormPage formKey="postRegister" config={formScreens.postRegister} />} />
+        <Route path="posts/detail" element={<PostDetail />} />
         <Route path="reservations" element={<ListPage listKey="reservations" />} />
         <Route path="reservations/new" element={<FormPage formKey="reservationRegister" config={formScreens.reservationRegister} />} />
+        <Route path="reservations/resources/new" element={<FormPage formKey="resourceRegister" config={formScreens.resourceRegister} />} />
         <Route path="reservations/approve" element={<ReservationApprove />} />
-        <Route path="approval" element={<ListPage listKey="approval" />} />
+        <Route path="approval" element={<ApprovalList />} />
+        <Route path="approval/new" element={<ApprovalApply />} />
         <Route path="templates" element={<ListPage listKey="templates" />} />
         <Route path="templates/new" element={<FormPage formKey="templateRegister" config={formScreens.templateRegister} />} />
+        <Route path="templates/detail" element={<TemplateDetail />} />
         <Route path="tasks" element={<ListPage listKey="tasks" />} />
         <Route path="tasks/new" element={<FormPage formKey="taskRegister" config={formScreens.taskRegister} />} />
         <Route path="schedule" element={<ScheduleList />} />

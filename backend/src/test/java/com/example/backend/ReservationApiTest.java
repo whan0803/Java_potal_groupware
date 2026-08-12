@@ -12,6 +12,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -56,9 +57,10 @@ class ReservationApiTest {
                         .session(session)
                         .param("type", "MEETING_ROOM"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].resourceId").value(resourceId))
-                .andExpect(jsonPath("$[0].resourceName").value("codex_reservation_room"));
+                .andExpect(jsonPath(
+                        "$[?(@.resourceId == %d)].resourceName".formatted(resourceId),
+                        hasItem("codex_reservation_room")
+                ));
 
         Long reservationId = createReservation(
                 session,

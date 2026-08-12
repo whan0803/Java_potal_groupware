@@ -5,6 +5,7 @@ import user.dto.*;
 import user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import security.CustomUserDetails;
 
 @RestController
 @RequestMapping("/api/users")
@@ -124,6 +126,22 @@ public class UserController {
         );
 
 
+    }
+
+    @PatchMapping("/me/password")
+    public Map<String, String> changeMyPassword(
+            @Valid @RequestBody PasswordChangeRequest request,
+            Authentication authentication
+    ) {
+        CustomUserDetails principal =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        userService.changePassword(
+                principal.getUserId(),
+                request
+        );
+
+        return Map.of("message", "비밀번호가 변경되었습니다.");
     }
 
 

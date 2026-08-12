@@ -23,6 +23,8 @@ public class UserUpdateRequest {
     @Size(max = 20, message = "전화번호는 20자 이하여야 합니다")
     private String phone;
 
+    @Size(min = 6, message = "비밀번호는 6자 이상이어야 합니다")
+    private String password;
 
     @Pattern(
             regexp = "Y|N",

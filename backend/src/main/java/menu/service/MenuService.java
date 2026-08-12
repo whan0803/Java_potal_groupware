@@ -9,6 +9,7 @@ import menu.entity.Menu;
 import menu.repository.MenuRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import role.repository.RoleMenuRepository;
 
 import java.util.List;
 import java.util.Objects;
@@ -19,6 +20,7 @@ import java.util.Objects;
 public class MenuService {
 
     private final MenuRepository menuRepository;
+    private final RoleMenuRepository roleMenuRepository;
 
     // MENU-001 메뉴 목록 조회
     public List<MenuResponse> getMenus() {
@@ -32,6 +34,11 @@ public class MenuService {
     // MENU-002 메뉴 등록
     @Transactional
     public Long createMenu(MenuCreateRequest request) {
+        validateDuplicateMenu(
+                request.menuName(),
+                request.menuUrl(),
+                null
+        );
 
         Menu parentMenu = findParentMenu(request.parentMenuId());
 
@@ -61,6 +68,11 @@ public class MenuService {
         Menu parentMenu = findParentMenu(request.parentMenuId());
 
         validateParentMenu(menu, parentMenu);
+        validateDuplicateMenu(
+                request.menuName(),
+                request.menuUrl(),
+                menuId
+        );
 
         int menuLevel = calculateMenuLevel(parentMenu);
 
@@ -118,6 +130,66 @@ public class MenuService {
         }
 
         menu.disable(userId);
+    }
+
+    // 메뉴 실제 삭제
+    @Transactional
+    public void deleteMenu(Long menuId) {
+        Menu menu = findMenu(menuId);
+        deleteMenuTree(menu);
+    }
+
+    private void deleteMenuTree(Menu menu) {
+        List<Menu> children =
+                menuRepository.findByParentMenuMenuIdOrderBySortOrderAsc(
+                        menu.getMenuId()
+                );
+
+        for (Menu child : children) {
+            deleteMenuTree(child);
+        }
+
+        roleMenuRepository.deleteByMenuMenuId(menu.getMenuId());
+        menuRepository.delete(menu);
+    }
+
+    private void validateDuplicateMenu(
+            String menuName,
+            String menuUrl,
+            Long menuId
+    ) {
+        String normalizedName = menuName == null ? "" : menuName.trim();
+        String normalizedUrl = menuUrl == null ? "" : menuUrl.trim();
+
+        boolean duplicateName = menuId == null
+                ? menuRepository.existsByMenuName(normalizedName)
+                : menuRepository.existsByMenuNameAndMenuIdNot(
+                        normalizedName,
+                        menuId
+                );
+
+        if (duplicateName) {
+            throw new IllegalArgumentException(
+                    "이미 사용 중인 메뉴명입니다."
+            );
+        }
+
+        if (normalizedUrl.isBlank()) {
+            return;
+        }
+
+        boolean duplicateUrl = menuId == null
+                ? menuRepository.existsByMenuUrl(normalizedUrl)
+                : menuRepository.existsByMenuUrlAndMenuIdNot(
+                        normalizedUrl,
+                        menuId
+                );
+
+        if (duplicateUrl) {
+            throw new IllegalArgumentException(
+                    "이미 사용 중인 메뉴 URL입니다."
+            );
+        }
     }
 
     // menuId로 메뉴 조회

@@ -8,10 +8,11 @@ function UserDetail() {
   const index = Number.parseInt(searchParams.get('index') ?? '0', 10);
   const row = lists.users.rows[index] ?? lists.users.rows[0];
   const fields = [
-    ['이메일', row[4]],
-    ['로그인 실패', row[5]],
+    ['이메일', row[5]],
+    ['연락처', row[6]],
     ['부서', row[3]],
-    ['등록일', row[7]],
+    ['권한', row[4]],
+    ['등록일', row[8]],
   ];
 
   return (
@@ -23,10 +24,10 @@ function UserDetail() {
         <div>
           <h2>{row[2]}</h2>
           <p className="mono">{row[1]}</p>
-          <p>{row[3]}</p>
+          <p>{row[3] || row[4]}</p>
           <span className="status-badge">
             <span />
-            {row[6]}
+            {row[7]}
           </span>
         </div>
       </div>
@@ -41,7 +42,7 @@ function UserDetail() {
       <div className="roles">
         <p>보유 권한</p>
         <div>
-          <span>{row[1] === 'admin' ? 'ROLE_ADMIN' : 'ROLE_USER'}</span>
+          <span>{row._meta?.roles?.map((role) => role.roleCode).join(', ') || row[4]}</span>
         </div>
       </div>
       <div className="form-actions">

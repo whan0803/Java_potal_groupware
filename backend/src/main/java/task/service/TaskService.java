@@ -27,7 +27,7 @@ public class TaskService {
     // 업무 목록 조회
     public Page<TaskResponse> getTasks(Pageable pageable){
 
-        return taskRepository.findAll(pageable)
+        return taskRepository.findByUseYn("Y", pageable)
                 .map(TaskResponse::from);
 
     }

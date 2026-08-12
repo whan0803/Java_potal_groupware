@@ -6,6 +6,7 @@ import notice.dto.*;
 import notice.service.NoticeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +35,7 @@ public class NoticeController {
 
             @PageableDefault(
                     size = 10,
+                    direction = Sort.Direction.DESC,
                     sort = {
                             "importantYn",
                             "createdAt"
@@ -60,10 +62,16 @@ public class NoticeController {
     // 상세 조회
     @GetMapping("/{noticeId}")
     public ResponseEntity<NoticeDetailResponse> getNotice(
-            @PathVariable Long noticeId
+            @PathVariable Long noticeId,
+            @RequestParam(defaultValue = "true") boolean increaseView,
+            @RequestParam(defaultValue = "true") boolean requireVisible
     ) {
         return ResponseEntity.ok(
-                noticeService.getNotice(noticeId)
+                noticeService.getNotice(
+                        noticeId,
+                        increaseView,
+                        requireVisible
+                )
         );
     }
 

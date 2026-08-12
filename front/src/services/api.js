@@ -51,6 +51,7 @@ export const api = {
 export const authApi = {
   login: ({ id, password }) => api.post('/api/auth/login', { loginId: id, password }),
   me: () => api.get('/api/auth/me'),
+  changePassword: (body) => api.patch('/api/users/me/password', body),
   logout: () => api.post('/api/auth/logout', {}),
 };
 
@@ -74,4 +75,16 @@ export const listApi = {
   receivedMessages: (userId) => api.get('/api/messages/received', { userId, size: 200 }),
   sentMessages: (userId) => api.get('/api/messages/sent', { userId, size: 200 }),
   codes: () => api.get('/api/common-codes'),
+};
+
+export const attachmentApi = {
+  upload: ({ file, referenceType, referenceId, userId }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('referenceType', referenceType);
+    formData.append('referenceId', referenceId);
+    formData.append('userId', userId);
+    return request('/api/attachments/upload', { method: 'POST', body: formData });
+  },
+  list: (referenceType, referenceId) => api.get('/api/attachments', { referenceType, referenceId }),
 };

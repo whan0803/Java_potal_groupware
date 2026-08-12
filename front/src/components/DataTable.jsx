@@ -1,6 +1,82 @@
 const statusValues = ['사용', '미사용', '승인', '대기', '반려', '진행중', '완료', '예정', '보류'];
 
 function renderCell(cell, options = {}) {
+  if (options.isPostAction) {
+    return (
+      <span className="role-action-group">
+        <button className="table-action" type="button" onClick={() => options.onAction('상세')}>
+          상세
+        </button>
+        {options.canUpdate ? (
+          <button className="table-action" type="button" onClick={() => options.onAction('수정')}>
+            수정
+          </button>
+        ) : null}
+        {options.canDelete ? (
+          <button className="table-action danger" type="button" onClick={() => options.onAction('삭제')}>
+            삭제
+          </button>
+        ) : null}
+      </span>
+    );
+  }
+
+  if (options.isTaskAction) {
+    return (
+      <span className="role-action-group">
+        {options.canUpdate ? (
+          <>
+            <button className="table-action" type="button" onClick={() => options.onAction('수정')}>
+              수정
+            </button>
+            <button className="table-action" type="button" onClick={() => options.onAction('진행률')}>
+              진행률
+            </button>
+            <button className="table-action" type="button" onClick={() => options.onAction('상태')}>
+              상태
+            </button>
+          </>
+        ) : (
+          <span className="muted-cell">읽기 전용</span>
+        )}
+        {options.canDelete ? (
+          <button className="table-action danger" type="button" onClick={() => options.onAction('삭제')}>
+            삭제
+          </button>
+        ) : null}
+      </span>
+    );
+  }
+
+  if (options.isReservationAction) {
+    return (
+      <span className="role-action-group">
+        {options.canUpdate ? (
+          <button className="table-action" type="button" onClick={() => options.onAction('수정')}>
+            수정
+          </button>
+        ) : null}
+        {options.canDelete ? (
+          <button className="table-action danger" type="button" onClick={() => options.onAction('취소')}>
+            취소
+          </button>
+        ) : null}
+      </span>
+    );
+  }
+
+  if (options.isApprovalAction) {
+    if (cell === '결재 처리' && options.canUpdate) {
+      return (
+        <button className="table-action" type="button" onClick={options.onAction}>
+          결재 처리
+        </button>
+      );
+    }
+
+    return <span className="muted-cell">{cell === '결재 처리' ? '처리 권한 없음' : '처리 완료'}</span>;
+  }
+
   if (options.isRoleAction) {
     return (
       <span className="role-action-group">
@@ -77,6 +153,10 @@ function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDele
               {row.map((cell, cellIndex) => (
                 <td key={`${cell}-${cellIndex}`}>
                   {renderCell(cell, {
+                    isPostAction: listKey === 'posts' && cellIndex === actionColumnIndex,
+                    isTaskAction: listKey === 'tasks' && cellIndex === actionColumnIndex,
+                    isReservationAction: listKey === 'reservations' && cellIndex === actionColumnIndex,
+                    isApprovalAction: listKey === 'approval' && cellIndex === actionColumnIndex,
                     isRoleAction: listKey === 'roles' && cellIndex === actionColumnIndex,
                     isAction: cellIndex === actionColumnIndex,
                     canUpdate: canUpdate && (canEditRow?.(row) ?? true),
@@ -95,7 +175,7 @@ function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDele
 
 function canDeleteRow(listKey, action) {
   if (!['수정', '상세', '보기'].includes(action)) return false;
-  return !['logs', 'approval', 'reservations'].includes(listKey);
+  return !['logs', 'approval'].includes(listKey);
 }
 
 export default DataTable;

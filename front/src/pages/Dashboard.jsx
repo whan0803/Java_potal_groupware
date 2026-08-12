@@ -22,7 +22,7 @@ function Dashboard() {
   const monthSchedules = activeSchedules.filter((schedule) => getScheduleDate(schedule).startsWith(currentMonth));
   const pick = (rows, mapper, count = 3) => rows.slice(0, count).map(mapper);
   const stats = [
-    [String(lists.users.rows.length), '총 사용자', `활성 ${lists.users.rows.filter((row) => row[6] === '사용').length}명`],
+    [String(lists.users.rows.length), '총 사용자', `활성 ${lists.users.rows.filter((row) => row[7] === '사용').length}명`],
     [String(lists.approval.rows.length), '결재 대기', '처리 필요'],
     [String(lists.reservations.rows.filter((row) => row[8] === '대기').length), '예약 승인 대기', '승인 대기'],
     [String(lists.tasks.rows.filter((row) => row[5] === '진행중').length), '진행 중 업무', '현재 진행'],

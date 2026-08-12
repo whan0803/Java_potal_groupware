@@ -50,10 +50,18 @@ export const navGroups = [
     children: [
       ['예약 목록', '/reservations'],
       ['예약 신청', '/reservations/new'],
+      ['예약 자원 등록', '/reservations/resources/new'],
       ['예약 승인', '/reservations/approve'],
     ],
   },
-  { label: '결재', icon: 14, children: [['결재 대기함', '/approval']] },
+  {
+    label: '결재',
+    icon: 14,
+    children: [
+      ['결재 대기함', '/approval'],
+      ['결재 신청', '/approval/new'],
+    ],
+  },
   {
     label: '문서양식 관리',
     icon: 14,
@@ -120,8 +128,10 @@ export const pageMeta = {
   '/posts/new': ['게시판 관리', '게시글 등록'],
   '/reservations': ['예약 관리', '예약 목록'],
   '/reservations/new': ['예약 관리', '예약 신청'],
+  '/reservations/resources/new': ['예약 관리', '예약 자원 등록'],
   '/reservations/approve': ['예약 관리', '예약 승인', '예약 승인 관리'],
   '/approval': ['결재', '결재함'],
+  '/approval/new': ['결재', '결재 신청'],
   '/templates': ['문서양식 관리', '문서양식 목록'],
   '/templates/new': ['문서양식 관리', '문서양식 등록'],
   '/tasks': ['업무 관리', '업무 목록'],
@@ -146,7 +156,11 @@ export const pageActions = {
   '/notices': ['공지 등록', '/notices/new'],
   '/boards': ['게시판 등록', '/boards/new'],
   '/posts': ['게시글 등록', '/posts/new'],
-  '/reservations': ['예약 신청', '/reservations/new'],
+  '/reservations': [
+    ['예약 신청', '/reservations/new'],
+    ['자원 등록', '/reservations/resources/new'],
+  ],
+  '/approval': ['결재 신청', '/approval/new'],
   '/templates': ['문서양식 등록', '/templates/new'],
   '/tasks': ['업무 등록', '/tasks/new'],
   '/schedule': ['일정 등록', '/schedule/new'],

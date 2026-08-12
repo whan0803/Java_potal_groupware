@@ -35,9 +35,13 @@ export const formScreens = {
     fields: ['자원 선택 *', '예약일 *', '시작 시간 *', '종료 시간 *', '사용 목적'],
     action: '중복 확인',
   },
+  resourceRegister: {
+    width: 'medium',
+    fields: ['자원 유형 *', '자원명 *', '설명', '수용/탑승 인원', '위치', '차량 번호'],
+  },
   taskRegister: {
     width: 'medium',
-    fields: ['업무 제목 *', '업무 내용 *', '담당자 *', '마감일 *'],
+    fields: ['업무 제목 *', '업무 내용 *', '담당자 *', '마감일 *', '상태'],
     upload: ['첨부파일', '파일 추가', 'PDF·Office·이미지·ZIP, 파일당 최대 10MB'],
   },
   templateRegister: {

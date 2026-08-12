@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
+import { api } from '../services/api.js';
 import { buildRow, formTargets } from '../utils/formActions.js';
 import { canUsePermission } from '../utils/permissions.js';
 import RoleSelectModal from './RoleSelectModal.jsx';
@@ -10,6 +11,8 @@ const selectOptions = {
   '중요 공지 여부': ['일반', '중요'],
   '첨부파일 허용 여부': ['허용', '미허용'],
   '일정 유형': ['PERSONAL', 'PUBLIC'],
+  '자원 유형': ['회의실', '차량'],
+  상태: ['예정', '진행중', '완료', '보류'],
   '종일 일정 여부': ['아니오', '예'],
 };
 
@@ -52,6 +55,7 @@ function FormPage({ formKey, config }) {
   const {
     user,
     lists,
+    resources,
     permissions,
     apiStatus,
     addListRow,
@@ -66,9 +70,14 @@ function FormPage({ formKey, config }) {
   const editIndex = Number.parseInt(searchParams.get('index') ?? '', 10);
   const editingRow = Number.isInteger(editIndex) && target?.listKey ? lists[target.listKey]?.rows[editIndex] : null;
   const initialValues = useMemo(() => rowToValues(formKey, editingRow), [formKey, editingRow]);
+  const initialRoles = useMemo(
+    () => editingRow?._meta?.roles?.map((role) => role.roleCode ?? role.roleName).filter(Boolean) ?? [],
+    [editingRow],
+  );
   const [values, setValues] = useState(initialValues);
   const [selectedChip, setSelectedChip] = useState(editingRow?.[1] ?? config.chips?.[0] ?? '');
-  const [selectedRoles, setSelectedRoles] = useState([]);
+  const dynamicOptions = useMemo(() => getDynamicOptions(formKey, lists, resources, selectedChip), [formKey, lists, resources, selectedChip]);
+  const [selectedRoles, setSelectedRoles] = useState(initialRoles);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [files, setFiles] = useState([]);
   const [error, setError] = useState('');
@@ -76,6 +85,22 @@ function FormPage({ formKey, config }) {
   const handleChange = (label, value) => {
     setValues((current) => ({ ...current, [label]: value }));
   };
+
+  useEffect(() => {
+    let mounted = true;
+    const loader = detailLoaders[formKey];
+    if (!editingRow?._meta || !loader) return undefined;
+
+    loader(editingRow._meta)
+      .then((nextValues) => {
+        if (mounted) setValues((current) => ({ ...current, ...nextValues }));
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, [formKey, editingRow]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -95,7 +120,7 @@ function FormPage({ formKey, config }) {
 
     if (apiStatus.connected) {
       try {
-        await saveFormRecord(formKey, values, { editingRow, selectedChip, selectedRoles });
+        await saveFormRecord(formKey, values, { editingRow, selectedChip, selectedRoles, files });
         setError('');
         window.alert(config.action === '보내기' ? '발송 완료' : '저장되었습니다.');
         navigate(target.redirectTo);
@@ -182,12 +207,19 @@ function FormPage({ formKey, config }) {
               onChange={handleChange}
               onRoleSelect={() => setIsRoleModalOpen(true)}
               selectedRoles={selectedRoles}
+              dynamicOptions={dynamicOptions}
               key={section.title}
             />
           ))
         : null}
       {fields.length ? (
-        <FieldGrid fields={fields} placeholders={config.placeholders} values={values} onChange={handleChange} />
+        <FieldGrid
+          fields={fields}
+          placeholders={config.placeholders}
+          values={values}
+          onChange={handleChange}
+          dynamicOptions={dynamicOptions}
+        />
       ) : null}
       {config.help ? <p className="form-help">{config.help}</p> : null}
       {config.upload ? <UploadBox upload={config.upload} files={files} onFilesChange={setFiles} /> : null}
@@ -234,9 +266,10 @@ function rowToValues(formKey, row) {
     userRegister: () => ({
       아이디: row[1],
       이름: row[2],
-      부서: row[3],
-      이메일: row[4],
-      사용여부: row[6],
+      부서: row._meta?.department ?? row[3] ?? '',
+      이메일: row[5],
+      연락처: row._meta?.phone ?? row[6] ?? '',
+      사용여부: row[7],
     }),
     roleRegister: () => ({
       '권한 코드': row[1],
@@ -255,6 +288,7 @@ function rowToValues(formKey, row) {
       return {
         '중요 공지 여부': row[1],
         제목: row[2],
+        내용: row._meta?.content ?? '',
         '게시 시작일': startDate,
         '게시 종료일': endDate,
       };
@@ -266,8 +300,9 @@ function rowToValues(formKey, row) {
       사용여부: row[4],
     }),
     postRegister: () => ({
-      '게시판 ID': row[1],
+      '게시판 ID': String(row._meta?.boardId ?? row[1]),
       제목: row[2],
+      내용: row._meta?.content ?? '',
       사용여부: row[6],
     }),
     reservationRegister: () => ({
@@ -279,8 +314,10 @@ function rowToValues(formKey, row) {
     }),
     taskRegister: () => ({
       '업무 제목': row[1],
+      '업무 내용': row._meta?.content ?? '',
       담당자: row[2],
       마감일: row[4],
+      상태: row[5],
     }),
     templateRegister: () => ({
       '양식 코드': row[1],
@@ -298,6 +335,38 @@ function rowToValues(formKey, row) {
 
   return mappers[formKey]?.() ?? {};
 }
+
+const detailLoaders = {
+  userRegister: async (meta) => {
+    const user = await api.get(`/api/users/${meta.userId}`);
+    return {
+      아이디: user.loginId,
+      이름: user.userName,
+      부서: meta.department ?? '',
+      이메일: user.email ?? '',
+      연락처: user.phone ?? '',
+      사용여부: user.useYn === 'N' ? '미사용' : '사용',
+    };
+  },
+  noticeRegister: async (meta) => {
+    const notice = await api.get(`/api/notices/${meta.noticeId}`, { increaseView: false, requireVisible: false });
+    return {
+      제목: notice.title,
+      내용: notice.content ?? '',
+      '중요 공지 여부': notice.importantYn === 'Y' ? '중요' : '일반',
+      '게시 시작일': String(notice.startDate ?? '').slice(0, 10),
+      '게시 종료일': String(notice.endDate ?? '').slice(0, 10),
+    };
+  },
+  postRegister: async (meta) => {
+    const post = await api.get(`/api/posts/${meta.postId}`, { increaseView: false });
+    return {
+      '게시판 ID': String(post.boardId),
+      제목: post.title,
+      내용: post.content ?? '',
+    };
+  },
+};
 
 function validateForm(config, values, lists, options = {}) {
   const fields = [
@@ -333,7 +402,7 @@ function validateForm(config, values, lists, options = {}) {
   }
   if (options.formKey === 'reservationRegister') {
     const conflict = lists.reservations.rows.some((row) => {
-      if (row === options.editingRow || row[8] === '반려') return false;
+      if (row === options.editingRow || ['반려', '취소'].includes(row[8])) return false;
       const sameType = row[1] === options.selectedChip;
       const sameResource = row[2] === values['자원 선택'];
       const sameDate = row[5] === values.예약일;
@@ -345,11 +414,19 @@ function validateForm(config, values, lists, options = {}) {
   if (values.아이디 && lists.users.rows.some((row) => row !== options.editingRow && row[1] === values.아이디)) {
     return { ok: false, message: '이미 사용 중인 아이디입니다.' };
   }
-  if (values.이메일 && lists.users.rows.some((row) => row !== options.editingRow && row[4] === values.이메일)) {
+  if (values.이메일 && lists.users.rows.some((row) => row !== options.editingRow && row[5] === values.이메일)) {
     return { ok: false, message: '이미 사용 중인 이메일입니다.' };
   }
   if (values['권한 코드'] && lists.roles.rows.some((row) => row !== options.editingRow && row[1] === values['권한 코드'])) {
     return { ok: false, message: '이미 사용 중인 권한 코드입니다.' };
+  }
+  if (options.formKey === 'menuEdit') {
+    if (values.메뉴명 && lists.menus.rows.some((row) => row !== options.editingRow && row[0] === values.메뉴명)) {
+      return { ok: false, message: '이미 사용 중인 메뉴명입니다.' };
+    }
+    if (values.URL && lists.menus.rows.some((row) => row !== options.editingRow && row[1] === values.URL)) {
+      return { ok: false, message: '이미 사용 중인 메뉴 URL입니다.' };
+    }
   }
   if (values['양식 코드'] && lists.templates.rows.some((row) => row !== options.editingRow && row[1] === values['양식 코드'])) {
     return { ok: false, message: '이미 사용 중인 양식 코드입니다.' };
@@ -361,11 +438,30 @@ function validateForm(config, values, lists, options = {}) {
   return { ok: true };
 }
 
-function FormSection({ section, values, onChange, onRoleSelect, selectedRoles = [] }) {
+function getDynamicOptions(formKey, lists, resources, selectedChip) {
+  const boardOptions = lists.boards.rows
+    .filter((row) => row[4] !== '미사용')
+    .map((row) => ({ value: String(row._meta?.boardId ?? row[1]), label: row[1] }));
+  const userOptions = lists.users.rows
+    .filter((row) => row[7] !== '미사용')
+    .map((row) => ({ value: String(row._meta?.userId ?? row[1]), label: `${row[2]} (${row[1]})` }));
+  const resourceOptions = resources
+    .filter((resource) => resource.resourceType === (selectedChip === '차량' ? 'VEHICLE' : 'MEETING_ROOM'))
+    .map((resource) => ({ value: resource.resourceName, label: resource.resourceName }))
+    .filter((option, index, options) => option.value && options.findIndex((item) => item.value === option.value) === index);
+  return {
+    '게시판 ID': boardOptions,
+    수신자: userOptions,
+    담당자: userOptions,
+    '자원 선택': resourceOptions,
+  };
+}
+
+function FormSection({ section, values, onChange, onRoleSelect, selectedRoles = [], dynamicOptions = {} }) {
   return (
     <section className="form-section">
       <h2>{section.title}</h2>
-      {section.fields ? <FieldGrid fields={section.fields} values={values} onChange={onChange} /> : null}
+      {section.fields ? <FieldGrid fields={section.fields} values={values} onChange={onChange} dynamicOptions={dynamicOptions} /> : null}
       {section.empty ? (
         <div className="empty-strip">
           {selectedRoles.length ? (
@@ -388,14 +484,14 @@ function FormSection({ section, values, onChange, onRoleSelect, selectedRoles = 
   );
 }
 
-function FieldGrid({ fields, placeholders = {}, values, onChange }) {
+function FieldGrid({ fields, placeholders = {}, values, onChange, dynamicOptions = {} }) {
   return (
     <div className="field-grid">
       {fields.map((field) => {
         const label = field.replace(' *', '');
         const required = field.includes('*');
         const large = ['내용', '업무 내용', '사용 목적'].includes(label);
-        const options = selectOptions[label];
+        const options = dynamicOptions[label] ?? selectOptions[label];
 
         return (
           <label className={large ? 'field large' : 'field'} key={field}>
@@ -413,8 +509,8 @@ function FieldGrid({ fields, placeholders = {}, values, onChange }) {
               >
                 <option value="">선택</option>
                 {options.map((option) => (
-                  <option value={option} key={option}>
-                    {option}
+                  <option value={typeof option === 'string' ? option : option.value} key={typeof option === 'string' ? option : option.value}>
+                    {typeof option === 'string' ? option : option.label}
                   </option>
                 ))}
               </select>

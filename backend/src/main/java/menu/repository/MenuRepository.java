@@ -22,4 +22,18 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
             Long parentMenuId,
             String useYn
     );
+
+    boolean existsByMenuName(String menuName);
+
+    boolean existsByMenuUrl(String menuUrl);
+
+    boolean existsByMenuNameAndMenuIdNot(
+            String menuName,
+            Long menuId
+    );
+
+    boolean existsByMenuUrlAndMenuIdNot(
+            String menuUrl,
+            Long menuId
+    );
 }

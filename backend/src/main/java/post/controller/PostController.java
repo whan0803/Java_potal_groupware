@@ -59,10 +59,11 @@ public class PostController {
     // 게시글 상세 조회
     @GetMapping("/{postId}")
     public ResponseEntity<PostDetailResponse> getPost(
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @RequestParam(defaultValue = "true") boolean increaseView
     ) {
         PostDetailResponse response =
-                postService.getPost(postId);
+                postService.getPost(postId, increaseView);
 
         return ResponseEntity.ok(response);
     }

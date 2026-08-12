@@ -585,7 +585,7 @@ public class ApprovalService {
             Long approverId
     ) {
 
-        return lines.stream()
+        ApprovalLine assignedLine = lines.stream()
                 .filter(line ->
                         line.getApprover()
                                 .getUserId()
@@ -597,12 +597,43 @@ public class ApprovalService {
                         )
                 )
                 .findFirst()
-                .orElseThrow(
-                        () ->
-                                new IllegalArgumentException(
-                                        "현재 결재 순서의 결재자가 아닙니다."
+                .orElse(null);
+
+        if (assignedLine != null) {
+            return assignedLine;
+        }
+
+        if (isAdminUser(approverId)) {
+            return lines.stream()
+                    .filter(line ->
+                            "PENDING".equals(
+                                    line.getApprovalStatus()
+                            )
+                    )
+                    .findFirst()
+                    .orElseThrow(
+                            () ->
+                                    new IllegalArgumentException(
+                                            "현재 처리할 결재 순서가 없습니다."
+                                    )
+                    );
+        }
+
+        throw new IllegalArgumentException(
+                "현재 결재 순서의 결재자가 아닙니다."
+        );
+    }
+
+    private boolean isAdminUser(Long userId) {
+        return userRepository.findDetailByUserId(userId)
+                .map(user -> user.getUserRoles().stream()
+                        .anyMatch(userRole ->
+                                "ROLE_ADMIN".equals(
+                                        userRole.getRole().getRoleCode()
                                 )
-                );
+                        )
+                )
+                .orElse(false);
     }
 
 

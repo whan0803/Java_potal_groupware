@@ -1,4 +1,4 @@
-import { api, getPageItems, listApi } from './api.js';
+import { api, attachmentApi, getPageItems, listApi } from './api.js';
 
 const formatDate = (value) => String(value ?? '').slice(0, 10);
 const formatTime = (value) => String(value ?? '').slice(11, 16);
@@ -12,14 +12,26 @@ const statusLabel = (value) => {
     APPROVED: '승인',
     REJECTED: '반려',
     CANCELLED: '취소',
+    CANCELED: '취소',
     PENDING: '진행중',
     IN_PROGRESS: '진행중',
     READY: '예정',
     DONE: '완료',
     COMPLETED: '완료',
     HOLD: '보류',
+    DRAFT: '임시저장',
   };
   return labels[value] ?? value ?? '-';
+};
+const approvalStatusLabel = (value) => {
+  const labels = {
+    DRAFT: '임시저장',
+    IN_PROGRESS: '진행중',
+    APPROVED: '완료',
+    REJECTED: '반려',
+    CANCELED: '취소',
+  };
+  return labels[value] ?? statusLabel(value);
 };
 const statusValue = (value) => {
   const values = {
@@ -37,6 +49,25 @@ const statusValue = (value) => {
 
 const withMeta = (row, meta) => Object.assign(row, { _meta: meta });
 const page = (response) => getPageItems(response);
+const loadUserDepartments = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem('groupware-admin:userDepartments') ?? '{}');
+  } catch {
+    return {};
+  }
+};
+const saveUserDepartment = (userId, loginId, department) => {
+  if (!department) return;
+  try {
+    const departments = loadUserDepartments();
+    const key = String(userId ?? loginId);
+    departments[key] = department;
+    if (loginId) departments[String(loginId)] = department;
+    window.localStorage.setItem('groupware-admin:userDepartments', JSON.stringify(departments));
+  } catch {
+    // Department is optional display data; failed storage should not block saving.
+  }
+};
 const formListKeys = {
   userRegister: 'users',
   roleRegister: 'roles',
@@ -60,6 +91,11 @@ const formIdKeys = {
   templateRegister: 'templateId',
   taskRegister: 'taskId',
   codeRegister: 'codeGroupId',
+};
+const attachmentReferenceTypes = {
+  noticeRegister: 'NOTICE',
+  postRegister: 'POST',
+  taskRegister: 'TASK',
 };
 
 const flattenMenus = (menus, rows = []) => {
@@ -164,20 +200,22 @@ export async function fetchBackendState(user) {
 }
 
 function mapUsers(response) {
+  const departments = loadUserDepartments();
   const rows = page(response).map((item, index) =>
     withMeta([
       String(index + 1),
       item.loginId,
       item.userName,
+      item.department ?? departments[String(item.userId)] ?? departments[String(item.loginId)] ?? '',
       item.roles?.map((role) => role.roleName).join(', ') || '-',
       item.email ?? '',
-      '0회',
+      item.phone ?? '',
       ynLabel(item.useYn),
       formatDate(item.createdAt),
       '보기',
-    ], item),
+    ], { ...item, department: item.department ?? departments[String(item.userId)] ?? departments[String(item.loginId)] ?? '' }),
   );
-  return withRows('이름·아이디·부서 검색', ['No', '아이디', '이름', '부서', '이메일', '로그인실패', '사용여부', '등록일', '관리'], rows);
+  return withRows('이름·아이디·부서·권한 검색', ['No', '아이디', '이름', '부서', '권한', '이메일', '연락처', '사용여부', '등록일', '관리'], rows);
 }
 
 function mapRoles(items) {
@@ -277,16 +315,19 @@ function mapReservations(items, resources) {
 
 function mapApprovals(items) {
   const rows = page(items).map((item, index) =>
-    withMeta([
-      String(index + 1),
-      item.templateName ?? item.documentType ?? '-',
-      item.title,
-      item.drafterName ?? '',
-      item.departmentName ?? '-',
-      formatDate(item.createdAt ?? item.createAt),
-      statusLabel(item.approvalStatus ?? item.status),
-      '결재 처리',
-    ], item),
+    {
+      const approvalStatus = approvalStatusLabel(item.approvalStatus ?? item.status);
+      return withMeta([
+        String(index + 1),
+        item.templateName ?? item.documentType ?? '-',
+        item.title,
+        item.drafterName ?? '',
+        item.departmentName ?? '-',
+        formatDate(item.createdAt ?? item.createAt),
+        approvalStatus,
+        approvalStatus === '진행중' ? '결재 처리' : '처리 완료',
+      ], item);
+    }
   );
   return { tabs: ['결재 대기', '결재 완료'], total: `총 ${rows.length}건`, columns: ['No', '문서 유형', '제목', '기안자', '부서', '기안일', '결재 상태', '처리'], rows };
 }
@@ -299,7 +340,7 @@ function mapTemplates(items) {
       item.templateName,
       item.templateDescription ?? '',
       ynLabel(item.useYn),
-      '수정',
+      '상세',
     ], item),
   );
   return withRows('양식 코드·양식명 검색', ['No', '양식 코드', '양식명', '설명', '사용여부', '관리'], rows);
@@ -353,20 +394,24 @@ function withRows(search, columns, rows) {
 }
 
 export async function saveFormToBackend(formKey, values, context) {
-  const { user, lists, resources, editingRow, selectedChip } = context;
+  const { user, lists, resources, editingRow, selectedChip, files = [] } = context;
   const userId = getCurrentUserId(user);
   const meta = resolveEditingMeta(formKey, values, lists, editingRow);
   assertEditableTarget(formKey, editingRow, meta);
   const roleIdByName = (name) => lists.roles.rows.find((row) => row[2] === name || row[1] === name)?._meta?.roleId;
   const boardId = Number(values['게시판 ID']) || lists.boards.rows.find((row) => row[1] === values['게시판 ID'])?._meta?.boardId || lists.boards.rows[0]?._meta?.boardId;
   const assigneeId = Number(values.담당자) || lists.users.rows.find((row) => row[2] === values.담당자 || row[1] === values.담당자)?._meta?.userId || userId;
-  const resource = resources.find((item) => item.resourceName === values['자원 선택']) ?? resources.find((item) => item.resourceType === (selectedChip === '차량' ? 'VEHICLE' : 'MEETING_ROOM'));
+  const selectedResourceType = selectedChip === '차량' ? 'VEHICLE' : 'MEETING_ROOM';
+  const resource = resources.find((item) => item.resourceName === values['자원 선택'] && item.resourceType === selectedResourceType)
+    ?? resources.find((item) => item.resourceName === values['자원 선택'])
+    ?? resources.find((item) => item.resourceType === selectedResourceType);
 
   const handlers = {
     userRegister: () => {
+      saveUserDepartment(meta.userId, values.아이디, values.부서);
       const body = {
         loginId: values.아이디,
-        password: values.비밀번호 || 'user12345',
+        password: values.비밀번호 || (meta.userId ? undefined : 'user12345'),
         userName: values.이름,
         email: values.이메일 || null,
         phone: values.연락처 || null,
@@ -405,7 +450,7 @@ export async function saveFormToBackend(formKey, values, context) {
         startDate: values['게시 시작일'],
         endDate: values['게시 종료일'],
         importantYn: ynValue(values['중요 공지 여부'], '중요'),
-        useYn: ynValue(values.사용여부),
+        useYn: values.사용여부 ? ynValue(values.사용여부) : meta.useYn ?? 'Y',
         userId,
         admin: true,
       };
@@ -421,13 +466,19 @@ export async function saveFormToBackend(formKey, values, context) {
       };
       return meta.boardId ? api.put(`/api/boards/${meta.boardId}`, body) : api.post('/api/boards', body);
     },
-    postRegister: () => {
+    postRegister: async () => {
       const body = { boardId, title: values.제목, content: values.내용 || values.제목, writerId: userId };
-      return meta.postId ? api.put(`/api/posts/${meta.postId}`, body) : api.post('/api/posts', body);
+      const postId = meta.postId
+        ? (await api.put(`/api/posts/${meta.postId}`, { ...body, userId, admin: isAdminUser(user) }), meta.postId)
+        : await api.post('/api/posts', body);
+      await uploadFiles(formKey, postId, files, userId);
+      return postId;
     },
     reservationRegister: () => {
       const body = {
         resourceId: resource?.resourceId,
+        resourceName: values['자원 선택'],
+        resourceType: selectedResourceType,
         requesterId: userId,
         title: values['사용 목적'] || '예약 신청',
         purpose: values['사용 목적'] || '',
@@ -436,6 +487,14 @@ export async function saveFormToBackend(formKey, values, context) {
       };
       return meta.reservationId ? api.put(`/api/reservations/${meta.reservationId}`, body) : api.post('/api/reservations', body);
     },
+    resourceRegister: () => api.post('/api/reservations/resources', {
+      resourceType: values['자원 유형'] === '차량' ? 'VEHICLE' : 'MEETING_ROOM',
+      resourceName: values.자원명,
+      resourceDescription: values.설명 || '',
+      capacity: Number(values['수용/탑승 인원']) || null,
+      location: values.위치 || '',
+      vehicleNumber: values['차량 번호'] || '',
+    }),
     templateRegister: () => {
       const body = {
         templateCode: values['양식 코드'],
@@ -491,7 +550,31 @@ export async function saveFormToBackend(formKey, values, context) {
     },
   };
 
-  return handlers[formKey]?.();
+  const result = await handlers[formKey]?.();
+  const referenceType = attachmentReferenceTypes[formKey];
+  const referenceId = getReferenceId(formKey, meta, result);
+  if (referenceType && formKey !== 'postRegister') {
+    await uploadFiles(formKey, referenceId, files, userId);
+  }
+  return result;
+}
+
+function getReferenceId(formKey, meta, result) {
+  const idKey = formIdKeys[formKey];
+  if (meta?.[idKey]) return meta[idKey];
+  if (typeof result === 'number') return result;
+  return result?.[idKey] ?? result?.id;
+}
+
+async function uploadFiles(formKey, referenceId, files, userId) {
+  const referenceType = attachmentReferenceTypes[formKey];
+  if (!referenceType || !referenceId || !files?.length) return;
+  await Promise.all(files.map((file) => attachmentApi.upload({ file, referenceType, referenceId, userId })));
+}
+
+function isAdminUser(user) {
+  const roles = [user?.role, ...(user?.roles ?? [])];
+  return roles.some((role) => ['시스템 관리자', 'ROLE_ADMIN', 'ADMIN'].includes(role));
 }
 
 export async function deleteBackendRow(listKey, row, user) {
@@ -500,9 +583,10 @@ export async function deleteBackendRow(listKey, row, user) {
   const handlers = {
     users: () => api.patch(`/api/users/${meta.userId}/deactivate`),
     roles: () => api.delete(`/api/roles/${meta.roleId}`),
-    menus: () => api.patch(`/api/menu/${meta.menuId}/disable`, { userId }),
+    menus: () => api.delete(`/api/menu/${meta.menuId}`),
+    notices: () => api.patch(`/api/notices/${meta.noticeId}/delete`, { userId, admin: isAdminUser(user) }),
     boards: () => api.patch(`/api/boards/${meta.boardId}/disable`, { userId }),
-    posts: () => api.patch(`/api/posts/${meta.postId}/delete`, { userId, admin: true }),
+    posts: () => api.patch(`/api/posts/${meta.postId}/delete`, { userId, admin: isAdminUser(user) }),
     reservations: () => api.patch(`/api/reservations/${meta.reservationId}/cancel`),
     templates: () => api.delete(`/api/document-templates/${meta.templateId}`),
     tasks: () => api.delete(`/api/tasks/${meta.taskId}`),

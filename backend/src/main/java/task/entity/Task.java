@@ -168,6 +168,8 @@ public class Task {
         if(status.equals("COMPLETED")){
             this.completedAt = LocalDateTime.now();
             this.progressRate = 100;
+        } else {
+            this.completedAt = null;
         }
 
     }

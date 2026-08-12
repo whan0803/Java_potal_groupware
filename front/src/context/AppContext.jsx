@@ -161,19 +161,28 @@ export function AppProvider({ children }) {
       setPermissions([]);
   };
 
-  const changePassword = ({ currentPassword, nextPassword, confirmPassword }) => {
+  const changePassword = async ({ currentPassword, nextPassword, confirmPassword }) => {
     if (!currentPassword || !nextPassword || !confirmPassword) {
       return { ok: false, message: '모든 항목을 입력하세요.' };
-    }
-    const account = accounts.find((item) => item.id === user?.id);
-    if (account?.password !== currentPassword) {
-      return { ok: false, message: '기존 비밀번호가 일치하지 않습니다.' };
     }
     if (nextPassword !== confirmPassword) {
       return { ok: false, message: '새 비밀번호와 확인 값이 다릅니다.' };
     }
     if (nextPassword.length < 6) {
       return { ok: false, message: '새 비밀번호는 6자 이상이어야 합니다.' };
+    }
+    if (apiStatus.connected) {
+      try {
+        const response = await authApi.changePassword({ currentPassword, nextPassword, confirmPassword });
+        return { ok: true, message: response.message ?? '비밀번호가 변경되었습니다.' };
+      } catch (error) {
+        return { ok: false, message: error.message || '비밀번호 변경에 실패했습니다.' };
+      }
+    }
+
+    const account = accounts.find((item) => item.id === user?.id);
+    if (account?.password !== currentPassword) {
+      return { ok: false, message: '기존 비밀번호가 일치하지 않습니다.' };
     }
     setAccounts((current) =>
       current.map((item) => (item.id === user?.id ? { ...item, password: nextPassword } : item)),
@@ -298,6 +307,7 @@ export function AppProvider({ children }) {
         editingRow: options.editingRow,
         selectedChip: options.selectedChip,
         selectedRoles: options.selectedRoles ?? [],
+        files: options.files ?? [],
       });
       await refreshBackendState();
       return;

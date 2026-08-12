@@ -117,8 +117,8 @@ class DocumentFileApiTest {
 
         mockMvc.perform(get("/api/document-templates/{templateId}", templateId)
                         .session(session))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.useYn").value("N"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("문서양식을 찾을 수 없습니다."));
     }
 
     @Test

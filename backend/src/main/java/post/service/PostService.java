@@ -56,11 +56,16 @@ public class PostService {
 
     // 게시글 상세 조회 및 조회수 증가
     @Transactional
-    public PostDetailResponse getPost(Long postId) {
+    public PostDetailResponse getPost(
+            Long postId,
+            boolean increaseView
+    ) {
 
         Post post = findActivePost(postId);
 
-        post.increaseViewCount();
+        if (increaseView) {
+            post.increaseViewCount();
+        }
 
         return PostDetailResponse.from(post);
     }

@@ -187,8 +187,7 @@ public class DocumentTemplateService {
         DocumentTemplate template =
                 findTemplate(templateId);
 
-
-        template.delete();
+        repository.delete(template);
 
     }
 

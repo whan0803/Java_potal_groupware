@@ -7,8 +7,11 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 public record ReservationCreateRequest(
-        @NotNull(message = "예약 자원은 필수입니다.")
         Long resourceId,
+
+        String resourceName,
+
+        String resourceType,
 
         @NotNull(message = "예약자는 필수입니다.")
         Long requesterId,

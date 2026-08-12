@@ -23,5 +23,7 @@ public interface RoleMenuRepository extends JpaRepository<RoleMenu, Long> {
 
     void deleteByRoleRoleId(Long longId);
 
+    void deleteByMenuMenuId(Long menuId);
+
     boolean existsByRoleRoleId(Long roleId);
 }

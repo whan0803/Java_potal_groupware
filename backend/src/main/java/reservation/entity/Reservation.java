@@ -138,6 +138,7 @@ public class Reservation {
 
     public void update(
 
+            ReservationResource resource,
             String title,
             String purpose,
             LocalDateTime start,
@@ -146,6 +147,7 @@ public class Reservation {
 
     ){
 
+        this.resource = resource;
         this.title = title;
         this.purpose = purpose;
         this.startDatetime = start;

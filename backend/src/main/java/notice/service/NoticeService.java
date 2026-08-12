@@ -52,17 +52,23 @@ public class NoticeService {
 
     // 상세 조회 및 조회수 증가
     @Transactional
-    public NoticeDetailResponse getNotice(Long noticeId) {
+    public NoticeDetailResponse getNotice(
+            Long noticeId,
+            boolean increaseView,
+            boolean requireVisible
+    ) {
 
         Notice notice = findActiveNotice(noticeId);
 
-        if (!notice.isVisible(LocalDate.now())) {
+        if (requireVisible && !notice.isVisible(LocalDate.now())) {
             throw new IllegalStateException(
                     "현재 게시 기간이 아닌 공지사항입니다."
             );
         }
 
-        notice.increaseViewCount();
+        if (increaseView) {
+            notice.increaseViewCount();
+        }
 
         return NoticeDetailResponse.from(notice);
     }

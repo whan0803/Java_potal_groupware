@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
@@ -65,6 +66,10 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/error"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/**")
+                        .authenticated()
+                        .requestMatchers("/api/users/me/password")
+                        .authenticated()
                         .requestMatchers("/api/users/**")
                         .hasRole("ADMIN")
                         .anyRequest()

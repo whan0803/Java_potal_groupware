@@ -72,13 +72,9 @@ public class MenuController {
 
     @DeleteMapping("/{menuId}")
     public ResponseEntity<Void> delete(
-            @PathVariable Long menuId,
-            @Valid @RequestBody MenuDisableRequest request
+            @PathVariable Long menuId
     ) {
-        menuService.disableMenu(
-                menuId,
-                request.userId()
-        );
+        menuService.deleteMenu(menuId);
 
         return ResponseEntity.noContent().build();
     }
