@@ -1,5 +1,5 @@
 front 실행
-cd front -> num run dev
+cd front -> npm i -> num run dev
 
 java 실행
 backend폴더 인텔리j에서 열고 backendApplication 실행
