@@ -25,7 +25,6 @@ public class CommonCodeController {
 
 
 
-    // CODE-001
     // 목록 조회
 
     @GetMapping
@@ -44,7 +43,6 @@ public class CommonCodeController {
 
 
 
-    // CODE-002
     // 등록
 
     @PostMapping
@@ -68,7 +66,6 @@ public class CommonCodeController {
 
 
 
-    // CODE-003
     // 수정
 
     @PutMapping("/{codeGroupId}")

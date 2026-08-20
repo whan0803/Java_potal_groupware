@@ -69,6 +69,10 @@ function FormPage({ formKey, config }) {
   const target = formTargets[formKey];
   const editIndex = Number.parseInt(searchParams.get('index') ?? '', 10);
   const editingRow = Number.isInteger(editIndex) && target?.listKey ? lists[target.listKey]?.rows[editIndex] : null;
+  const sections = useMemo(
+    () => (config.sections ?? []).filter((section) => !(formKey === 'userRegister' && editingRow && section.title === '비밀번호')),
+    [config.sections, editingRow, formKey],
+  );
   const initialValues = useMemo(() => rowToValues(formKey, editingRow), [formKey, editingRow]);
   const initialRoles = useMemo(
     () => editingRow?._meta?.roles?.map((role) => role.roleCode ?? role.roleName).filter(Boolean) ?? [],
@@ -199,8 +203,8 @@ function FormPage({ formKey, config }) {
           <span>{selectedRoles.length ? selectedRoles.join(', ') : '선택된 권한이 없습니다.'}</span>
         </div>
       ) : null}
-      {config.sections
-        ? config.sections.map((section) => (
+      {sections.length
+        ? sections.map((section) => (
             <FormSection
               section={section}
               values={values}
