@@ -3,6 +3,27 @@
 
 ---
 
+
+| **항목**      | **버전 / 사용 기술**                     |
+| ----------- | ---------------------------------- |
+| JDK         | 21                                 |
+| Spring Boot | 4.1.0                              |
+| 빌드 도구       | Gradle                             |
+| ORM         | Spring Data JPA / Hibernate        |
+| 보안          | Spring Security                    |
+| Backend     | Java                               |
+| Frontend    | React + Vite                       |
+| 패키지 관리      | npm                                |
+| DB          | PostgreSQL                         |
+| DB 서비스      | Supabase                           |
+| IDE         | IntelliJ IDEA / Visual Studio Code |
+| 형상 관리       | Git / GitHub                       |
+| 화면 설계       | Figma                              |
+| ERD 설계      | dbdiagram.io                       |
+| 프로세스 설계     | draw.io                            |
+| 메뉴 구조도      | Octopus.do                         |
+
+
 ## 기술 스택
 
 ### Frontend
