@@ -167,10 +167,12 @@ export async function fetchBackendState(user) {
 
   const value = (index, fallback) => (settled[index].status === 'fulfilled' ? settled[index].value : fallback);
   const roles = value(1, []);
-  const primaryRole = roles.find((role) => user.roles?.includes(role.roleCode) || user.role === role.roleCode);
-  const permissions = primaryRole?.roleId
-    ? await listApi.roleMenus(primaryRole.roleId).catch(() => [])
-    : [];
+  const userRoleCodes = new Set([user.role, ...(user.roles ?? [])].filter(Boolean));
+  const matchedRoles = roles.filter((role) => userRoleCodes.has(role.roleCode));
+  const roleMenuResults = await Promise.allSettled(matchedRoles.map((role) => listApi.roleMenus(role.roleId)));
+  const permissions = mergeRoleMenuPermissions(
+    roleMenuResults.flatMap((result) => (result.status === 'fulfilled' ? result.value : [])),
+  );
   const resources = [...value(6, []), ...value(7, [])];
   const reservations = (
     await Promise.allSettled(resources.map((resource) => listApi.reservations(resource.resourceId)))
@@ -197,6 +199,27 @@ export async function fetchBackendState(user) {
     dashboard: value(15, null),
     permissions,
   };
+}
+
+function mergeRoleMenuPermissions(items) {
+  const merged = new Map();
+  items.forEach((item) => {
+    const key = item.menuId ?? item.menuUrl ?? item.menuName;
+    if (!key) return;
+    const current = merged.get(key);
+    if (!current) {
+      merged.set(key, { ...item });
+      return;
+    }
+    merged.set(key, {
+      ...current,
+      readYn: current.readYn === 'Y' || item.readYn === 'Y' ? 'Y' : 'N',
+      createYn: current.createYn === 'Y' || item.createYn === 'Y' ? 'Y' : 'N',
+      updateYn: current.updateYn === 'Y' || item.updateYn === 'Y' ? 'Y' : 'N',
+      deleteYn: current.deleteYn === 'Y' || item.deleteYn === 'Y' ? 'Y' : 'N',
+    });
+  });
+  return [...merged.values()];
 }
 
 function mapUsers(response) {
@@ -411,7 +434,7 @@ export async function saveFormToBackend(formKey, values, context) {
       saveUserDepartment(meta.userId, values.아이디, values.부서);
       const body = {
         loginId: values.아이디,
-        password: values.비밀번호 || (meta.userId ? undefined : 'user12345'),
+        password: values.비밀번호 || undefined,
         userName: values.이름,
         email: values.이메일 || null,
         phone: values.연락처 || null,

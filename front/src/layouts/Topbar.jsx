@@ -1,8 +1,8 @@
 import Icon from '../components/Icon.jsx';
-import { useApp } from '../context/AppContext.jsx';
+import { useAuth } from '../context/AppContext.jsx';
 
 function Topbar() {
-  const { user } = useApp();
+  const { user } = useAuth();
 
   return (
     <header className="topbar">

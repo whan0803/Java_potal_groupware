@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { pageActions, pageMeta } from '../data/navigation.js';
-import { canUsePermission } from '../utils/permissions.js';
+import { canOpenAction, canUsePermission } from '../utils/permissions.js';
 
 function PageHeader() {
   const { pathname, search } = useLocation();
@@ -12,7 +12,6 @@ function PageHeader() {
   const title = meta.at(-1);
   const action = pageActions[pathname];
   const actions = Array.isArray(action?.[0]) ? action : action ? [action] : [];
-  const canCreate = canUsePermission(user, permissions, pathname, 'create');
   const canUpdate = canUsePermission(user, permissions, pathname, 'update');
 
   return (
@@ -43,13 +42,13 @@ function PageHeader() {
             ) : null}
           </>
         ) : null}
-        {canCreate
-          ? actions.map(([label, to], index) => (
+        {actions
+          .filter(([, to]) => canOpenAction(user, permissions, to))
+          .map(([label, to], index) => (
               <Link className={index === 0 ? 'button primary' : 'button secondary'} to={to} key={to}>
                 {label}
               </Link>
-            ))
-          : null}
+            ))}
       </div>
     </section>
   );

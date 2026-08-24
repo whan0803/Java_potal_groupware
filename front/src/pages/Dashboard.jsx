@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useApp } from '../context/AppContext.jsx';
+import { useGroupwareData } from '../context/AppContext.jsx';
 
 const getScheduleStart = (schedule) =>
   schedule.startDatetime ?? schedule.start_datetime ?? `${schedule.date ?? ''} ${schedule.time ?? '00:00'}:00`;
@@ -15,7 +15,7 @@ const getToday = () => {
 };
 
 function Dashboard() {
-  const { lists, schedules, messages } = useApp();
+  const { lists, schedules, messages } = useGroupwareData();
   const today = getToday();
   const currentMonth = today.slice(0, 7);
   const activeSchedules = schedules.filter((schedule) => (schedule.useYn ?? schedule.use_yn) !== 'N');

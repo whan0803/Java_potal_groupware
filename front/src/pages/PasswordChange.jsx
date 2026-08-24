@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useApp } from '../context/AppContext.jsx';
+import { useAuth } from '../context/AppContext.jsx';
 
 function PasswordChange() {
-  const { changePassword } = useApp();
+  const { changePassword } = useAuth();
   const [values, setValues] = useState({ currentPassword: '', nextPassword: '', confirmPassword: '' });
   const [message, setMessage] = useState('');
 

@@ -4,22 +4,6 @@ import { useApp } from '../context/AppContext.jsx';
 import { api } from '../services/api.js';
 import { getCurrentUserId } from '../services/backendAdapters.js';
 
-const initialRows = [
-  { name: '사용자 목록', url: '/users/list', read: true, create: true, update: true, delete: true },
-  { name: '사용자 등록', url: '/users/new', read: true, create: false, update: false, delete: false },
-  { name: '권한 목록', url: '/roles/list', read: true, create: true, update: true, delete: false },
-  { name: '권한 등록', url: '/roles/new', read: true, create: false, update: false, delete: false },
-  { name: '권한별 메뉴 설정', url: '/roles/menu', read: false, create: false, update: false, delete: false },
-  { name: '메뉴 목록', url: '/menus/list', read: true, create: true, update: true, delete: true },
-  { name: '메뉴 등록·수정', url: '/menus/edit', read: true, create: true, update: true, delete: false },
-  { name: '공지사항 목록', url: '/notices/list', read: true, create: false, update: false, delete: false },
-  { name: '공지사항 등록', url: '/notices/new', read: true, create: true, update: true, delete: false },
-  { name: '예약 목록', url: '/rsv/list', read: false, create: false, update: false, delete: false },
-  { name: '예약 신청', url: '/rsv/new', read: false, create: false, update: false, delete: false },
-  { name: '예약 승인', url: '/rsv/approve', read: false, create: false, update: false, delete: false },
-  { name: '결재 대기함', url: '/apr/inbox', read: false, create: false, update: false, delete: false },
-];
-
 const permissionKeys = [
   ['read', '조회(R)'],
   ['create', '등록(C)'],
@@ -28,15 +12,23 @@ const permissionKeys = [
 ];
 
 function RoleMenuSettings() {
-  const { user, lists, roleMenus, apiStatus, saveRoleMenus } = useApp();
+  const { user, lists, roleMenus, apiStatus, saveRoleMenus, refreshBackendState } = useApp();
   const [searchParams] = useSearchParams();
-  const initialRole = searchParams.get('role') ?? lists.roles.rows[0]?.[1] ?? 'ROLE_ADMIN';
+  const initialRole = searchParams.get('role') ?? lists.roles.rows[0]?.[1] ?? '';
   const [role, setRole] = useState(initialRole);
-  const [rows, setRows] = useState(roleMenus[initialRole] ?? initialRows);
+  const [rows, setRows] = useState(roleMenus[initialRole] ?? []);
   const [error, setError] = useState('');
 
   const selectedRoleRow = lists.roles.rows.find((roleRow) => roleRow[1] === role);
   const selectedRoleId = selectedRoleRow?._meta?.roleId;
+
+  useEffect(() => {
+    const firstRole = lists.roles.rows[0]?.[1];
+    if (!role && firstRole) {
+      setRole(firstRole);
+      setRows(roleMenus[firstRole] ?? []);
+    }
+  }, [lists.roles.rows, role, roleMenus]);
 
   useEffect(() => {
     if (!apiStatus.connected || !selectedRoleId) return;
@@ -58,12 +50,22 @@ function RoleMenuSettings() {
 
   const handleRoleChange = (nextRole) => {
     setRole(nextRole);
-    setRows(roleMenus[nextRole] ?? initialRows);
+    setRows(roleMenus[nextRole] ?? []);
   };
 
   const togglePermission = (rowIndex, key) => {
     setRows((current) =>
-      current.map((row, index) => (index === rowIndex ? { ...row, [key]: !row[key] } : row)),
+      current.map((row, index) => {
+        if (index !== rowIndex) return row;
+        const checked = !row[key];
+        if (key === 'read' && !checked) {
+          return { ...row, read: false, create: false, update: false, delete: false };
+        }
+        if (key !== 'read' && checked) {
+          return { ...row, read: true, [key]: true };
+        }
+        return { ...row, [key]: checked };
+      }),
     );
   };
 
@@ -81,6 +83,7 @@ function RoleMenuSettings() {
           </select>
         </label>
       </div>
+      {!lists.roles.rows.length ? <p className="form-error">설정할 권한 데이터가 없습니다.</p> : null}
       <div className="table-wrap">
         <table>
           <thead>
@@ -108,6 +111,11 @@ function RoleMenuSettings() {
                 ))}
               </tr>
             ))}
+            {!rows.length ? (
+              <tr>
+                <td colSpan={permissionKeys.length + 2}>표시할 메뉴 권한이 없습니다.</td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -117,6 +125,10 @@ function RoleMenuSettings() {
           type="button"
           onClick={async () => {
             try {
+              if (!role) {
+                setError('권한을 먼저 선택하세요.');
+                return;
+              }
               if (apiStatus.connected && selectedRoleId) {
                 await api.put(`/api/roles/${selectedRoleId}/menus`, {
                   userId: getCurrentUserId(user),
@@ -130,6 +142,7 @@ function RoleMenuSettings() {
                       deleteYn: row.delete ? 'Y' : 'N',
                     })),
                 });
+                await refreshBackendState();
               } else {
                 saveRoleMenus(role, rows);
               }

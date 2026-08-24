@@ -9,39 +9,13 @@ import {
 } from '../services/backendAdapters.js';
 import { loadStorage, saveStorage } from '../utils/storage.js';
 
-const AppContext = createContext(null);
+const AuthContext = createContext(null);
+const GroupwareDataContext = createContext(null);
+const GroupwareActionsContext = createContext(null);
 
-const initialAccounts = [
-  { id: 'admin', password: 'admin123', name: '홍길동', role: '시스템 관리자', enabled: true },
-  { id: 'user', password: 'user123', name: '김지수', role: '일반 사용자', enabled: true },
-  { id: 'disabled', password: 'disabled123', name: '비활성 사용자', role: '일반 사용자', enabled: false },
+const adminTestAccounts = [
+  { id: 'admin', password: 'admin123', name: '관리자', role: '시스템 관리자', enabled: true },
 ];
-
-const initialMessages = [
-  ['김지수', '07-27 09:15', '7월 인사 발령 안내', '인사팀', '7월 인사 발령 안내 관련 내용입니다.'],
-  ['최현우', '07-26 16:30', '서버 점검 협조 요청', 'IT기획팀', '서버 점검 시간 동안 업무 시스템 접속이 제한될 수 있습니다.'],
-  ['이민호', '07-25 11:00', '영업 자료 IT 지원 요청', '영업팀', '영업 제안 자료 준비를 위한 IT 지원을 요청합니다.'],
-  ['정유나', '07-27 14:20', '재무 시스템 오류 문의', '재무팀', '재무 시스템 오류 확인을 부탁드립니다.'],
-];
-
-const initialSentMessages = [
-  ['홍길동', '07-26 10:20', '회의 자료 전달드립니다', 'IT기획팀', '회의 자료를 전달드립니다.'],
-  ['홍길동', '07-25 15:40', '시스템 점검 확인 요청', 'IT기획팀', '시스템 점검 전 확인을 요청드립니다.'],
-];
-
-const initialRoleMenus = {
-  ROLE_ADMIN: [
-    { name: '사용자 목록', url: '/users/list', read: true, create: true, update: true, delete: true },
-    { name: '사용자 등록', url: '/users/new', read: true, create: true, update: true, delete: true },
-    { name: '권한 목록', url: '/roles/list', read: true, create: true, update: true, delete: false },
-    { name: '권한 등록', url: '/roles/new', read: true, create: true, update: true, delete: true },
-    { name: '권한별 메뉴 설정', url: '/roles/menu', read: true, create: true, update: true, delete: true },
-    { name: '메뉴 목록', url: '/menus/list', read: true, create: true, update: true, delete: true },
-    { name: '공지사항 목록', url: '/notices/list', read: true, create: true, update: true, delete: false },
-    { name: '예약 목록', url: '/reservations', read: true, create: true, update: true, delete: false },
-    { name: '업무 목록', url: '/tasks', read: true, create: true, update: true, delete: false },
-  ],
-};
 
 const toUserSession = (response) => ({
   userId: response.userId,
@@ -53,20 +27,27 @@ const toUserSession = (response) => ({
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [accounts, setAccounts] = useState(() => loadStorage('accounts', initialAccounts));
-  const [lists, setLists] = useState(() => loadStorage('lists', listScreens));
+  const [accounts, setAccounts] = useState(adminTestAccounts);
+  const [apiStatus, setApiStatus] = useState({ connected: false, loading: false, error: '' });
+
+  const [lists, setLists] = useState(listScreens);
   const [schedules, setSchedules] = useState(() => loadStorage('schedules', []));
-  const [messages, setMessages] = useState(() => loadStorage('messages', initialMessages));
-  const [sentMessages, setSentMessages] = useState(() => loadStorage('sentMessages', initialSentMessages));
-  const [roleMenus, setRoleMenus] = useState(() => loadStorage('roleMenus', initialRoleMenus));
+  const [messages, setMessages] = useState([]);
+  const [sentMessages, setSentMessages] = useState([]);
+  const [roleMenus, setRoleMenus] = useState({});
   const [resources, setResources] = useState(() => loadStorage('resources', []));
   const [dashboard, setDashboard] = useState(null);
   const [permissions, setPermissions] = useState([]);
-  const [apiStatus, setApiStatus] = useState({ connected: false, loading: false, error: '' });
 
   useEffect(() => {
     window.localStorage.removeItem('groupware-admin:user');
+    window.localStorage.removeItem('groupware-admin:accounts');
+    window.localStorage.removeItem('groupware-admin:lists');
+    window.localStorage.removeItem('groupware-admin:messages');
+    window.localStorage.removeItem('groupware-admin:sentMessages');
+    window.localStorage.removeItem('groupware-admin:roleMenus');
   }, []);
+
   useEffect(() => saveStorage('accounts', accounts), [accounts]);
   useEffect(() => saveStorage('lists', lists), [lists]);
   useEffect(() => saveStorage('schedules', schedules), [schedules]);
@@ -74,6 +55,35 @@ export function AppProvider({ children }) {
   useEffect(() => saveStorage('sentMessages', sentMessages), [sentMessages]);
   useEffect(() => saveStorage('roleMenus', roleMenus), [roleMenus]);
   useEffect(() => saveStorage('resources', resources), [resources]);
+
+  const writeAuditLog = (tableName, actionType, detail) => {
+    setLists((current) => {
+      const target = current.logs;
+      const nextRows = [
+        String(target.rows.length + 1),
+        tableName,
+        actionType,
+        user?.name ?? 'system',
+        new Date().toLocaleString('ko-KR'),
+        detail,
+        '상세',
+      ];
+
+      return {
+        ...current,
+        logs: {
+          ...target,
+          rows: [nextRows, ...target.rows],
+          total: `총 ${target.rows.length + 1}건`,
+        },
+      };
+    });
+  };
+
+  const resetSessionData = () => {
+    setDashboard(null);
+    setPermissions([]);
+  };
 
   const refreshBackendState = async () => {
     if (!user) return;
@@ -100,38 +110,21 @@ export function AppProvider({ children }) {
     refreshBackendState();
   }, [user?.userId, user?.id]);
 
-  const writeAuditLog = (tableName, actionType, detail) => {
-    setLists((current) => {
-      const target = current.logs;
-      const nextRows = [
-        String(target.rows.length + 1),
-        tableName,
-        actionType,
-        user?.name ?? 'system',
-        new Date().toLocaleString('ko-KR'),
-        detail,
-        '상세',
-      ];
-
-      return {
-        ...current,
-        logs: {
-          ...target,
-          rows: [nextRows, ...target.rows],
-          total: `총 ${target.rows.length + 1}건`,
-        },
-      };
-    });
-  };
-
   const login = async ({ id, password }) => {
     try {
-      const response = await authApi.login({ id, password });
+      await authApi.login({ id, password });
       const session = await authApi.me();
       setUser(toUserSession(session));
       setApiStatus({ connected: true, loading: false, error: '' });
       return { ok: true };
     } catch (error) {
+      if (!error.status) {
+        const localResult = localLogin({ id, password });
+        if (localResult.ok) {
+          setApiStatus({ connected: false, loading: false, error: error.message });
+          return localResult;
+        }
+      }
       setUser(null);
       setApiStatus({ connected: false, loading: false, error: error.message });
       return { ok: false, message: error.message || '로그인에 실패했습니다.' };
@@ -156,9 +149,8 @@ export function AppProvider({ children }) {
         // The local session should still be cleared even if the server session is already gone.
       }
     }
-      setUser(null);
-      setDashboard(null);
-      setPermissions([]);
+    setUser(null);
+    resetSessionData();
   };
 
   const changePassword = async ({ currentPassword, nextPassword, confirmPassword }) => {
@@ -315,9 +307,20 @@ export function AppProvider({ children }) {
     throw new Error('백엔드에 연결되어 있지 않습니다.');
   };
 
-  const value = useMemo(
+  const authValue = useMemo(
     () => ({
       user,
+      apiStatus,
+      login,
+      localLogin,
+      logout,
+      changePassword,
+    }),
+    [user, apiStatus, accounts],
+  );
+
+  const dataValue = useMemo(
+    () => ({
       lists,
       schedules,
       messages,
@@ -326,11 +329,12 @@ export function AppProvider({ children }) {
       resources,
       dashboard,
       permissions,
-      apiStatus,
-      login,
-      localLogin,
-      logout,
-      changePassword,
+    }),
+    [lists, schedules, messages, sentMessages, roleMenus, resources, dashboard, permissions],
+  );
+
+  const actionsValue = useMemo(
+    () => ({
       addListRow,
       updateListRow,
       updateRowStatus,
@@ -342,14 +346,40 @@ export function AppProvider({ children }) {
       saveFormRecord,
       refreshBackendState,
     }),
-    [user, accounts, lists, schedules, messages, sentMessages, roleMenus, resources, dashboard, permissions, apiStatus],
+    [lists, resources, user, apiStatus],
   );
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AuthContext.Provider value={authValue}>
+      <GroupwareDataContext.Provider value={dataValue}>
+        <GroupwareActionsContext.Provider value={actionsValue}>{children}</GroupwareActionsContext.Provider>
+      </GroupwareDataContext.Provider>
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const value = useContext(AuthContext);
+  if (!value) throw new Error('useAuth must be used inside AppProvider');
+  return value;
+}
+
+export function useGroupwareData() {
+  const value = useContext(GroupwareDataContext);
+  if (!value) throw new Error('useGroupwareData must be used inside AppProvider');
+  return value;
+}
+
+export function useGroupwareActions() {
+  const value = useContext(GroupwareActionsContext);
+  if (!value) throw new Error('useGroupwareActions must be used inside AppProvider');
+  return value;
 }
 
 export function useApp() {
-  const value = useContext(AppContext);
-  if (!value) throw new Error('useApp must be used inside AppProvider');
-  return value;
+  return {
+    ...useAuth(),
+    ...useGroupwareData(),
+    ...useGroupwareActions(),
+  };
 }

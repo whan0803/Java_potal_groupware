@@ -22,18 +22,20 @@ export const formTargets = {
   codeRegister: { listKey: 'codes', redirectTo: '/codes' },
 };
 
-export function buildRow(formKey, values, rowCount, existingRow = null) {
+export function buildRow(formKey, values, rowCount, existingRow = null, user = null) {
   const today = getToday();
   const number = String(rowCount + 1);
-  const get = (label, fallback) => values[label]?.trim() || fallback;
+  const get = (label, fallback = '') => values[label]?.trim() || fallback;
+  const currentUserName = user?.name ?? '';
+  const currentUserDepartment = user?.department ?? user?.deptName ?? '';
 
   const builders = {
     userRegister: () => [
       number,
-      get('아이디', `user${number}`),
-      get('이름', '신규 사용자'),
-      get('부서', '미지정'),
-      get('이메일', `user${number}@co.kr`),
+      get('아이디'),
+      get('이름'),
+      get('부서'),
+      get('이메일'),
       '0회',
       get('사용여부', '사용'),
       existingRow?.[7] ?? today,
@@ -41,18 +43,18 @@ export function buildRow(formKey, values, rowCount, existingRow = null) {
     ],
     roleRegister: () => [
       number,
-      get('권한 코드', `ROLE_CUSTOM_${number}`),
-      get('권한명', '신규 권한'),
-      get('설명', '사용자 정의 권한'),
+      get('권한 코드'),
+      get('권한명'),
+      get('설명'),
       '0명',
       get('사용여부', '사용'),
       existingRow?.[6] ?? today,
       '수정',
     ],
     menuEdit: () => [
-      get('메뉴명', '신규 메뉴'),
-      get('URL', `/custom/${number}`),
-      get('정렬 순서', number),
+      get('메뉴명'),
+      get('URL'),
+      get('정렬 순서'),
       '1단계',
       get('사용여부', '사용'),
       '수정',
@@ -60,8 +62,8 @@ export function buildRow(formKey, values, rowCount, existingRow = null) {
     noticeRegister: () => [
       number,
       get('중요 공지 여부', '일반'),
-      get('제목', '신규 공지사항'),
-      existingRow?.[3] ?? '홍길동',
+      get('제목'),
+      existingRow?.[3] ?? currentUserName,
       `${get('게시 시작일', today)} ~ ${get('게시 종료일', today)}`,
       existingRow?.[5] ?? '0',
       existingRow?.[6] ?? today,
@@ -69,17 +71,17 @@ export function buildRow(formKey, values, rowCount, existingRow = null) {
     ],
     boardRegister: () => [
       number,
-      get('게시판명', '신규 게시판'),
-      get('설명', '게시판 설명'),
+      get('게시판명'),
+      get('설명'),
       get('첨부파일 허용 여부', '허용'),
       get('사용여부', '사용'),
       '수정',
     ],
     postRegister: () => [
       number,
-      get('게시판 ID', '공지 게시판'),
-      get('제목', '신규 게시글'),
-      existingRow?.[3] ?? '홍길동',
+      get('게시판 ID'),
+      get('제목'),
+      existingRow?.[3] ?? currentUserName,
       existingRow?.[4] ?? '0',
       existingRow?.[5] ?? today,
       get('사용여부', existingRow?.[6] ?? '사용'),
@@ -88,20 +90,20 @@ export function buildRow(formKey, values, rowCount, existingRow = null) {
     reservationRegister: () => [
       number,
       get('예약 유형', '회의실'),
-      get('자원 선택', '신규 자원'),
-      '홍길동',
-      'IT기획팀',
+      get('자원 선택'),
+      currentUserName,
+      currentUserDepartment,
       get('예약일', today),
       `${get('시작 시간', '09:00')}~${get('종료 시간', '10:00')}`,
-      get('사용 목적', '예약 목적'),
+      get('사용 목적'),
       existingRow?.[8] ?? '대기',
       '상세',
     ],
     taskRegister: () => [
       number,
-      get('업무 제목', '신규 업무'),
-      get('담당자', '홍길동'),
-      existingRow?.[3] ?? 'IT기획팀',
+      get('업무 제목'),
+      get('담당자'),
+      existingRow?.[3] ?? currentUserDepartment,
       get('마감일', today),
       existingRow?.[5] ?? '예정',
       existingRow?.[6] ?? '0%',
@@ -110,17 +112,17 @@ export function buildRow(formKey, values, rowCount, existingRow = null) {
     ],
     templateRegister: () => [
       number,
-      get('양식 코드', `TMP_CUSTOM_${number}`),
-      get('양식명', '신규 문서양식'),
-      get('설명', '사용자 정의 결재 양식'),
+      get('양식 코드'),
+      get('양식명'),
+      get('설명'),
       get('사용여부', '사용'),
       '수정',
     ],
     codeRegister: () => [
       number,
-      get('코드 그룹 ID', `CUSTOM_CODE_${number}`),
-      get('그룹명', '신규 코드 그룹'),
-      get('설명', '공통코드 설명'),
+      get('코드 그룹 ID'),
+      get('그룹명'),
+      get('설명'),
       get('사용여부', '사용'),
       '상세',
     ],

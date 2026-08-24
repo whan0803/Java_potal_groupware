@@ -139,13 +139,13 @@ function FormPage({ formKey, config }) {
       const rowNumber = editingRow?.[0] && /^\d+$/.test(editingRow[0])
         ? Number(editingRow[0]) - 1
         : lists[target.listKey].rows.length;
-      const row = buildRow(formKey, sourceValues, rowNumber, editingRow);
+      const row = buildRow(formKey, sourceValues, rowNumber, editingRow, user);
       if (row && editingRow) updateListRow(target.listKey, editIndex, row);
       if (row && !editingRow) addListRow(target.listKey, row);
       if (formKey === 'userRegister') {
         upsertAccount({
           id: values.아이디,
-          password: editingRow ? values.비밀번호 : values.비밀번호 || 'user123',
+          password: values.비밀번호,
           name: values.이름,
           role: selectedRoles[0] ?? '일반 사용자',
           enabled: values.사용여부 !== '미사용',
@@ -154,7 +154,7 @@ function FormPage({ formKey, config }) {
     }
 
     if (formKey === 'messageCompose') {
-      addMessage([user?.name ?? '홍길동', '방금', values.제목 || '새 쪽지', values.수신자 || '수신자', values.내용 || '']);
+      addMessage([user?.name ?? '', '방금', values.제목 || '', values.수신자 || '', values.내용 || '']);
     }
 
     if (formKey === 'scheduleRegister') {

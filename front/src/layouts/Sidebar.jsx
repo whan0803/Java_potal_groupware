@@ -2,11 +2,18 @@ import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { navGroups } from '../data/navigation.js';
+import { canUsePermission } from '../utils/permissions.js';
 
 function Sidebar() {
   const { pathname } = useLocation();
-  const { user, logout } = useApp();
+  const { user, permissions, logout } = useApp();
   const [openGroup, setOpenGroup] = useState(() => getActiveGroup(pathname));
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      children: group.children?.filter(([, path]) => canUsePermission(user, permissions, path, 'read')),
+    }))
+    .filter((group) => (group.path ? canUsePermission(user, permissions, group.path, 'read') : group.children?.length));
 
   useEffect(() => {
     setOpenGroup(getActiveGroup(pathname));
@@ -25,7 +32,7 @@ function Sidebar() {
         </div>
       </div>
       <nav className="side-nav" aria-label="관리 메뉴">
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div className="nav-group" key={group.label}>
             {group.path ? (
               <NavLink className={({ isActive }) => `nav-parent ${isActive ? 'active' : ''}`} to={group.path} end>

@@ -6,6 +6,18 @@ function RoleDetail() {
   const [searchParams] = useSearchParams();
   const index = Number.parseInt(searchParams.get('index') ?? '0', 10);
   const row = lists.roles.rows[index] ?? lists.roles.rows[0];
+
+  if (!row) {
+    return (
+      <section className="detail-card">
+        <p className="form-error">권한 정보를 찾을 수 없습니다.</p>
+        <Link className="button secondary" to="/roles">
+          목록
+        </Link>
+      </section>
+    );
+  }
+
   const roleCode = row[1];
   const permissionRows = roleMenus[roleCode] ?? [];
 
