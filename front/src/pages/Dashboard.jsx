@@ -3,9 +3,12 @@ import { useGroupwareData } from '../context/AppContext.jsx';
 
 const getScheduleStart = (schedule) =>
   schedule.startDatetime ?? schedule.start_datetime ?? `${schedule.date ?? ''} ${schedule.time ?? '00:00'}:00`;
+
 const getScheduleDate = (schedule) => getScheduleStart(schedule).slice(0, 10);
+
 const getScheduleTime = (schedule) =>
   (schedule.allDayYn ?? schedule.all_day_yn) === 'Y' ? '종일' : getScheduleStart(schedule).slice(11, 16) || schedule.time || '';
+
 const getToday = () => {
   const now = new Date();
   const year = now.getFullYear();
