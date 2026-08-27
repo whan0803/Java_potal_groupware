@@ -117,19 +117,19 @@ function resolveEditingMeta(formKey, values, lists, editingRow) {
   const listKey = formListKeys[formKey];
   const rows = lists[listKey]?.rows ?? [];
   const matchers = {
-    userRegister: (row) => row[1] === values.아이디,
-    roleRegister: (row) => row[1] === values['권한 코드'],
-    menuEdit: (row) => row[0] === values.메뉴명 && row[1] === (values.URL || ''),
-    noticeRegister: (row) => row[2] === values.제목,
-    boardRegister: (row) => row[1] === values.게시판명,
-    postRegister: (row) => row[2] === values.제목,
+    userRegister: (row) => row[1] === values.loginId,
+    roleRegister: (row) => row[1] === values.roleCode,
+    menuEdit: (row) => row[0] === values.menuName && row[1] === (values.menuUrl || ''),
+    noticeRegister: (row) => row[2] === values.title,
+    boardRegister: (row) => row[1] === values.boardName,
+    postRegister: (row) => row[2] === values.title,
     reservationRegister: (row) =>
-      row[2] === values['자원 선택'] &&
-      row[5] === values.예약일 &&
-      String(row[6] ?? '') === `${values['시작 시간']}~${values['종료 시간']}`,
-    templateRegister: (row) => row[1] === values['양식 코드'],
-    taskRegister: (row) => row[1] === values['업무 제목'],
-    codeRegister: (row) => row[1] === values['코드 그룹 ID'],
+      row[2] === values.resourceName &&
+      row[5] === values.reservationDate &&
+      String(row[6] ?? '') === `${values.startTime}~${values.endTime}`,
+    templateRegister: (row) => row[1] === values.templateCode,
+    taskRegister: (row) => row[1] === values.title,
+    codeRegister: (row) => row[1] === values.codeGroupId,
   };
   return rows.find((row) => row._meta && (row === editingRow || matchers[formKey]?.(row)))?._meta ?? {};
 }
@@ -422,33 +422,33 @@ export async function saveFormToBackend(formKey, values, context) {
   const meta = resolveEditingMeta(formKey, values, lists, editingRow);
   assertEditableTarget(formKey, editingRow, meta);
   const roleIdByName = (name) => lists.roles.rows.find((row) => row[2] === name || row[1] === name)?._meta?.roleId;
-  const boardId = Number(values['게시판 ID']) || lists.boards.rows.find((row) => row[1] === values['게시판 ID'])?._meta?.boardId || lists.boards.rows[0]?._meta?.boardId;
-  const assigneeId = Number(values.담당자) || lists.users.rows.find((row) => row[2] === values.담당자 || row[1] === values.담당자)?._meta?.userId || userId;
+  const boardId = Number(values.boardId) || lists.boards.rows.find((row) => row[1] === values.boardId)?._meta?.boardId || lists.boards.rows[0]?._meta?.boardId;
+  const assigneeId = Number(values.assigneeId) || lists.users.rows.find((row) => row[2] === values.assigneeId || row[1] === values.assigneeId)?._meta?.userId || userId;
   const selectedResourceType = selectedChip === '차량' ? 'VEHICLE' : 'MEETING_ROOM';
-  const resource = resources.find((item) => item.resourceName === values['자원 선택'] && item.resourceType === selectedResourceType)
-    ?? resources.find((item) => item.resourceName === values['자원 선택'])
+  const resource = resources.find((item) => item.resourceName === values.resourceName && item.resourceType === selectedResourceType)
+    ?? resources.find((item) => item.resourceName === values.resourceName)
     ?? resources.find((item) => item.resourceType === selectedResourceType);
 
   const handlers = {
     userRegister: () => {
-      saveUserDepartment(meta.userId, values.아이디, values.부서);
+      saveUserDepartment(meta.userId, values.loginId, values.department);
       const body = {
-        loginId: values.아이디,
-        password: values.비밀번호 || undefined,
-        userName: values.이름,
-        email: values.이메일 || null,
-        phone: values.연락처 || null,
-        useYn: ynValue(values.사용여부),
+        loginId: values.loginId,
+        password: values.password || undefined,
+        userName: values.userName,
+        email: values.email || null,
+        phone: values.phone || null,
+        useYn: ynValue(values.useYn),
         roleIds: context.selectedRoles.map(roleIdByName).filter(Boolean),
       };
       return meta.userId ? api.put(`/api/users/${meta.userId}`, body) : api.post('/api/users', body);
     },
     roleRegister: () => {
       const body = {
-        roleCode: values['권한 코드'],
-        roleName: values.권한명,
-        roleDescription: values.설명 || '',
-        useYn: ynValue(values.사용여부),
+        roleCode: values.roleCode,
+        roleName: values.roleName,
+        roleDescription: values.roleDescription || '',
+        useYn: ynValue(values.useYn),
         createdBy: userId,
         updatedBy: userId,
       };
@@ -456,24 +456,24 @@ export async function saveFormToBackend(formKey, values, context) {
     },
     menuEdit: () => {
       const body = {
-        menuName: values.메뉴명,
-        menuUrl: values.URL || null,
+        menuName: values.menuName,
+        menuUrl: values.menuUrl || null,
         parentMenuId: null,
-        sortOrder: Number(values['정렬 순서']) || 0,
-        useYn: ynValue(values.사용여부),
+        sortOrder: Number(values.sortOrder) || 0,
+        useYn: ynValue(values.useYn),
         userId,
       };
       return meta.menuId ? api.put(`/api/menu/${meta.menuId}`, body) : api.post('/api/menu', body);
     },
     noticeRegister: () => {
       const body = {
-        title: values.제목,
-        content: values.내용,
+        title: values.title,
+        content: values.content,
         writerId: userId,
-        startDate: values['게시 시작일'],
-        endDate: values['게시 종료일'],
-        importantYn: ynValue(values['중요 공지 여부'], '중요'),
-        useYn: values.사용여부 ? ynValue(values.사용여부) : meta.useYn ?? 'Y',
+        startDate: values.startDate,
+        endDate: values.endDate,
+        importantYn: ynValue(values.importantYn, '중요'),
+        useYn: values.useYn ? ynValue(values.useYn) : meta.useYn ?? 'Y',
         userId,
         admin: true,
       };
@@ -481,16 +481,16 @@ export async function saveFormToBackend(formKey, values, context) {
     },
     boardRegister: () => {
       const body = {
-        boardName: values.게시판명,
-        boardDescription: values.설명 || '',
-        attachmentYn: ynValue(values['첨부파일 허용 여부'], '허용'),
-        useYn: ynValue(values.사용여부),
+        boardName: values.boardName,
+        boardDescription: values.boardDescription || '',
+        attachmentYn: ynValue(values.attachmentYn, '허용'),
+        useYn: ynValue(values.useYn),
         userId,
       };
       return meta.boardId ? api.put(`/api/boards/${meta.boardId}`, body) : api.post('/api/boards', body);
     },
     postRegister: async () => {
-      const body = { boardId, title: values.제목, content: values.내용 || values.제목, writerId: userId };
+      const body = { boardId, title: values.title, content: values.content || values.title, writerId: userId };
       const postId = meta.postId
         ? (await api.put(`/api/posts/${meta.postId}`, { ...body, userId, admin: isAdminUser(user) }), meta.postId)
         : await api.post('/api/posts', body);
@@ -500,31 +500,31 @@ export async function saveFormToBackend(formKey, values, context) {
     reservationRegister: () => {
       const body = {
         resourceId: resource?.resourceId,
-        resourceName: values['자원 선택'],
+        resourceName: values.resourceName,
         resourceType: selectedResourceType,
         requesterId: userId,
-        title: values['사용 목적'] || '예약 신청',
-        purpose: values['사용 목적'] || '',
-        startDateTime: `${values.예약일}T${values['시작 시간']}:00`,
-        endDateTime: `${values.예약일}T${values['종료 시간']}:00`,
+        title: values.purpose || '예약 신청',
+        purpose: values.purpose || '',
+        startDateTime: `${values.reservationDate}T${values.startTime}:00`,
+        endDateTime: `${values.reservationDate}T${values.endTime}:00`,
       };
       return meta.reservationId ? api.put(`/api/reservations/${meta.reservationId}`, body) : api.post('/api/reservations', body);
     },
     resourceRegister: () => api.post('/api/reservations/resources', {
-      resourceType: values['자원 유형'] === '차량' ? 'VEHICLE' : 'MEETING_ROOM',
-      resourceName: values.자원명,
-      resourceDescription: values.설명 || '',
-      capacity: Number(values['수용/탑승 인원']) || null,
-      location: values.위치 || '',
-      vehicleNumber: values['차량 번호'] || '',
+      resourceType: values.resourceType === '차량' ? 'VEHICLE' : 'MEETING_ROOM',
+      resourceName: values.resourceName,
+      resourceDescription: values.resourceDescription || '',
+      capacity: Number(values.capacity) || null,
+      location: values.location || '',
+      vehicleNumber: values.vehicleNumber || '',
     }),
     templateRegister: () => {
       const body = {
-        templateCode: values['양식 코드'],
-        templateName: values.양식명,
-        templateDescription: values.설명 || '',
-        templateContent: values['기본 내용'] || values.양식명,
-        useYn: ynValue(values.사용여부),
+        templateCode: values.templateCode,
+        templateName: values.templateName,
+        templateDescription: values.templateDescription || '',
+        templateContent: values.templateContent || values.templateName,
+        useYn: ynValue(values.useYn),
         createdBy: userId,
         updatedBy: userId,
       };
@@ -534,38 +534,38 @@ export async function saveFormToBackend(formKey, values, context) {
       const body = {
         requesterId: userId,
         assigneeId,
-        title: values['업무 제목'],
-        content: values['업무 내용'] || '',
-        taskStatus: statusValue(values.상태 || meta.taskStatus || '예정'),
-        priority: values.우선순위 || meta.priority || 'NORMAL',
-        startDate: values.시작일 || formatDate(new Date().toISOString()),
-        dueDate: values.마감일,
+        title: values.title,
+        content: values.content || '',
+        taskStatus: statusValue(values.taskStatus || meta.taskStatus || '예정'),
+        priority: values.priority || meta.priority || 'NORMAL',
+        startDate: values.startDate || formatDate(new Date().toISOString()),
+        dueDate: values.dueDate,
       };
       return meta.taskId ? api.put(`/api/tasks/${meta.taskId}`, body) : api.post('/api/tasks', body);
     },
     scheduleRegister: () => {
-      const allDayYn = ynValue(values['종일 일정 여부'], '예');
+      const allDayYn = ynValue(values.allDayYn, '예');
       const body = {
-        title: values.제목,
-        content: values.내용 || '',
-        location: values.장소 || '',
-        scheduleType: values['일정 유형'] || 'PERSONAL',
-        startDatetime: `${values.시작일}T${allDayYn === 'Y' ? '00:00' : values['시작 시간'] || '09:00'}:00`,
-        endDatetime: `${values.종료일}T${allDayYn === 'Y' ? '23:59' : values['종료 시간'] || '10:00'}:00`,
+        title: values.title,
+        content: values.content || '',
+        location: values.location || '',
+        scheduleType: values.scheduleType || 'PERSONAL',
+        startDatetime: `${values.startDate}T${allDayYn === 'Y' ? '00:00' : values.startTime || '09:00'}:00`,
+        endDatetime: `${values.endDate}T${allDayYn === 'Y' ? '23:59' : values.endTime || '10:00'}:00`,
         allDayYn,
       };
       return meta.scheduleId ? api.put(`/api/schedules/${meta.scheduleId}`, body) : api.post('/api/schedules', body);
     },
     messageCompose: () => {
-      const receiveId = Number(values.수신자) || lists.users.rows.find((row) => row[2] === values.수신자 || row[1] === values.수신자)?._meta?.userId;
-      return api.post(`/api/messages?senderId=${userId}`, { receiveId, title: values.제목, content: values.내용 });
+      const receiveId = Number(values.receiveId) || lists.users.rows.find((row) => row[2] === values.receiveId || row[1] === values.receiveId)?._meta?.userId;
+      return api.post(`/api/messages?senderId=${userId}`, { receiveId, title: values.title, content: values.content });
     },
     codeRegister: () => {
       const body = {
-        codeGroupId: values['코드 그룹 ID'],
-        codeGroupName: values.그룹명,
-        description: values.설명 || '',
-        useYn: ynValue(values.사용여부),
+        codeGroupId: values.codeGroupId,
+        codeGroupName: values.codeGroupName,
+        description: values.description || '',
+        useYn: ynValue(values.useYn),
         createdBy: userId,
         updatedBy: userId,
       };

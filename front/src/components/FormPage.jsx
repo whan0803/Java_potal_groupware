@@ -7,17 +7,17 @@ import { canUsePermission } from '../utils/permissions.js';
 import RoleSelectModal from './RoleSelectModal.jsx';
 
 const selectOptions = {
-  사용여부: ['사용', '미사용'],
-  '중요 공지 여부': ['일반', '중요'],
-  '첨부파일 허용 여부': ['허용', '미허용'],
-  '일정 유형': ['PERSONAL', 'PUBLIC'],
-  '자원 유형': ['회의실', '차량'],
-  상태: ['예정', '진행중', '완료', '보류'],
-  '종일 일정 여부': ['아니오', '예'],
+  useYn: ['사용', '미사용'],
+  importantYn: ['일반', '중요'],
+  attachmentYn: ['허용', '미허용'],
+  scheduleType: ['PERSONAL', 'PUBLIC'],
+  resourceType: ['회의실', '차량'],
+  taskStatus: ['예정', '진행중', '완료', '보류'],
+  allDayYn: ['아니오', '예'],
 };
 
-const dateFields = new Set(['게시 시작일', '게시 종료일', '예약일', '마감일', '시작일', '종료일']);
-const timeFields = new Set(['시작 시간', '종료 시간']);
+const dateFields = new Set(['startDate', 'endDate', 'reservationDate', 'dueDate']);
+const timeFields = new Set(['startTime', 'endTime']);
 const getToday = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -39,6 +39,13 @@ const getNowDatetime = () => {
   return `${date}T${time}:00`;
 };
 const toYn = (value, yesLabel = '예') => (value === yesLabel || value === 'Y' || value === '사용' ? 'Y' : 'N');
+const normalizeField = (field) => {
+  if (typeof field === 'string') {
+    const label = field.replace(' *', '');
+    return { name: label, label, required: field.includes('*') };
+  }
+  return field;
+};
 const getCurrentUserId = (user, lists) => {
   const numericId = Number(user?.user_id ?? user?.userId);
   if (Number.isInteger(numericId)) return numericId;
@@ -86,8 +93,8 @@ function FormPage({ formKey, config }) {
   const [files, setFiles] = useState([]);
   const [error, setError] = useState('');
 
-  const handleChange = (label, value) => {
-    setValues((current) => ({ ...current, [label]: value }));
+  const handleChange = (name, value) => {
+    setValues((current) => ({ ...current, [name]: value }));
   };
 
   useEffect(() => {
@@ -135,7 +142,7 @@ function FormPage({ formKey, config }) {
     }
 
     if (target.listKey) {
-      const sourceValues = { ...values, '예약 유형': selectedChip };
+      const sourceValues = { ...values, reservationType: selectedChip };
       const rowNumber = editingRow?.[0] && /^\d+$/.test(editingRow[0])
         ? Number(editingRow[0]) - 1
         : lists[target.listKey].rows.length;
@@ -144,32 +151,32 @@ function FormPage({ formKey, config }) {
       if (row && !editingRow) addListRow(target.listKey, row);
       if (formKey === 'userRegister') {
         upsertAccount({
-          id: values.아이디,
-          password: values.비밀번호,
-          name: values.이름,
+          id: values.loginId,
+          password: values.password,
+          name: values.userName,
           role: selectedRoles[0] ?? '일반 사용자',
-          enabled: values.사용여부 !== '미사용',
+          enabled: values.useYn !== '미사용',
         });
       }
     }
 
     if (formKey === 'messageCompose') {
-      addMessage([user?.name ?? '', '방금', values.제목 || '', values.수신자 || '', values.내용 || '']);
+      addMessage([user?.name ?? '', '방금', values.title || '', values.receiveId || '', values.content || '']);
     }
 
     if (formKey === 'scheduleRegister') {
-      const allDayYn = toYn(values['종일 일정 여부']);
+      const allDayYn = toYn(values.allDayYn);
       const userId = getCurrentUserId(user, lists);
       addSchedule({
         userId,
-        title: values.제목 || '신규 일정',
-        content: values.내용 || '',
-        location: values.장소 || '',
-        scheduleType: values['일정 유형'] || 'PERSONAL',
-        startDatetime: buildDatetime(values.시작일, allDayYn === 'Y' ? '00:00' : values['시작 시간'], '09:00'),
-        endDatetime: buildDatetime(values.종료일, allDayYn === 'Y' ? '23:59' : values['종료 시간'], '10:00'),
+        title: values.title || '신규 일정',
+        content: values.content || '',
+        location: values.location || '',
+        scheduleType: values.scheduleType || 'PERSONAL',
+        startDatetime: buildDatetime(values.startDate, allDayYn === 'Y' ? '00:00' : values.startTime, '09:00'),
+        endDatetime: buildDatetime(values.endDate, allDayYn === 'Y' ? '23:59' : values.endTime, '10:00'),
         allDayYn,
-        useYn: values.사용여부 === '미사용' ? 'N' : 'Y',
+        useYn: values.useYn === '미사용' ? 'N' : 'Y',
         createdAt: getNowDatetime(),
         createdBy: userId,
       });
@@ -268,72 +275,72 @@ function rowToValues(formKey, row) {
 
   const mappers = {
     userRegister: () => ({
-      아이디: row[1],
-      이름: row[2],
-      부서: row._meta?.department ?? row[3] ?? '',
-      이메일: row[5],
-      연락처: row._meta?.phone ?? row[6] ?? '',
-      사용여부: row[7],
+      loginId: row[1],
+      userName: row[2],
+      department: row._meta?.department ?? row[3] ?? '',
+      email: row[5],
+      phone: row._meta?.phone ?? row[6] ?? '',
+      useYn: row[7],
     }),
     roleRegister: () => ({
-      '권한 코드': row[1],
-      권한명: row[2],
-      설명: row[3],
-      사용여부: row[5],
+      roleCode: row[1],
+      roleName: row[2],
+      roleDescription: row[3],
+      useYn: row[5],
     }),
     menuEdit: () => ({
-      메뉴명: row[0],
-      URL: row[1],
-      '정렬 순서': row[2],
-      사용여부: row[4],
+      menuName: row[0],
+      menuUrl: row[1],
+      sortOrder: row[2],
+      useYn: row[4],
     }),
     noticeRegister: () => {
       const [startDate = '', endDate = ''] = String(row[4] ?? '').split(' ~ ');
       return {
-        '중요 공지 여부': row[1],
-        제목: row[2],
-        내용: row._meta?.content ?? '',
-        '게시 시작일': startDate,
-        '게시 종료일': endDate,
+        importantYn: row[1],
+        title: row[2],
+        content: row._meta?.content ?? '',
+        startDate,
+        endDate,
       };
     },
     boardRegister: () => ({
-      게시판명: row[1],
-      설명: row[2],
-      '첨부파일 허용 여부': row[3],
-      사용여부: row[4],
+      boardName: row[1],
+      boardDescription: row[2],
+      attachmentYn: row[3],
+      useYn: row[4],
     }),
     postRegister: () => ({
-      '게시판 ID': String(row._meta?.boardId ?? row[1]),
-      제목: row[2],
-      내용: row._meta?.content ?? '',
-      사용여부: row[6],
+      boardId: String(row._meta?.boardId ?? row[1]),
+      title: row[2],
+      content: row._meta?.content ?? '',
+      useYn: row[6],
     }),
     reservationRegister: () => ({
-      '자원 선택': row[2],
-      예약일: row[5],
-      '시작 시간': String(row[6] ?? '').split('~')[0] ?? '',
-      '종료 시간': String(row[6] ?? '').split('~')[1] ?? '',
-      '사용 목적': row[7],
+      resourceName: row[2],
+      reservationDate: row[5],
+      startTime: String(row[6] ?? '').split('~')[0] ?? '',
+      endTime: String(row[6] ?? '').split('~')[1] ?? '',
+      purpose: row[7],
     }),
     taskRegister: () => ({
-      '업무 제목': row[1],
-      '업무 내용': row._meta?.content ?? '',
-      담당자: row[2],
-      마감일: row[4],
-      상태: row[5],
+      title: row[1],
+      content: row._meta?.content ?? '',
+      assigneeId: row[2],
+      dueDate: row[4],
+      taskStatus: row[5],
     }),
     templateRegister: () => ({
-      '양식 코드': row[1],
-      양식명: row[2],
-      설명: row[3],
-      사용여부: row[4],
+      templateCode: row[1],
+      templateName: row[2],
+      templateDescription: row[3],
+      useYn: row[4],
     }),
     codeRegister: () => ({
-      '코드 그룹 ID': row[1],
-      그룹명: row[2],
-      설명: row[3],
-      사용여부: row[4],
+      codeGroupId: row[1],
+      codeGroupName: row[2],
+      description: row[3],
+      useYn: row[4],
     }),
   };
 
@@ -344,30 +351,30 @@ const detailLoaders = {
   userRegister: async (meta) => {
     const user = await api.get(`/api/users/${meta.userId}`);
     return {
-      아이디: user.loginId,
-      이름: user.userName,
-      부서: meta.department ?? '',
-      이메일: user.email ?? '',
-      연락처: user.phone ?? '',
-      사용여부: user.useYn === 'N' ? '미사용' : '사용',
+      loginId: user.loginId,
+      userName: user.userName,
+      department: meta.department ?? '',
+      email: user.email ?? '',
+      phone: user.phone ?? '',
+      useYn: user.useYn === 'N' ? '미사용' : '사용',
     };
   },
   noticeRegister: async (meta) => {
     const notice = await api.get(`/api/notices/${meta.noticeId}`, { increaseView: false, requireVisible: false });
     return {
-      제목: notice.title,
-      내용: notice.content ?? '',
-      '중요 공지 여부': notice.importantYn === 'Y' ? '중요' : '일반',
-      '게시 시작일': String(notice.startDate ?? '').slice(0, 10),
-      '게시 종료일': String(notice.endDate ?? '').slice(0, 10),
+      title: notice.title,
+      content: notice.content ?? '',
+      importantYn: notice.importantYn === 'Y' ? '중요' : '일반',
+      startDate: String(notice.startDate ?? '').slice(0, 10),
+      endDate: String(notice.endDate ?? '').slice(0, 10),
     };
   },
   postRegister: async (meta) => {
     const post = await api.get(`/api/posts/${meta.postId}`, { increaseView: false });
     return {
-      '게시판 ID': String(post.boardId),
-      제목: post.title,
-      내용: post.content ?? '',
+      boardId: String(post.boardId),
+      title: post.title,
+      content: post.content ?? '',
     };
   },
 };
@@ -376,30 +383,29 @@ function validateForm(config, values, lists, options = {}) {
   const fields = [
     ...(config.fields ?? []),
     ...(config.sections?.flatMap((section) => section.fields ?? []) ?? []),
-  ];
+  ].map(normalizeField);
   const required = fields
-    .filter((field) => field.includes('*'))
-    .map((field) => field.replace(' *', ''))
-    .filter((field) => !(options.formKey === 'userRegister' && options.editingRow && field.includes('비밀번호')));
-  const missing = required.find((field) => !values[field]?.trim());
-  if (missing) return { ok: false, message: `${missing} 항목은 필수입니다.` };
+    .filter((field) => field.required)
+    .filter((field) => !(options.formKey === 'userRegister' && options.editingRow && field.name.includes('password')));
+  const missing = required.find((field) => !String(values[field.name] ?? '').trim());
+  if (missing) return { ok: false, message: `${missing.label} 항목은 필수입니다.` };
 
-  if (values.이메일 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.이메일)) {
+  if (values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
     return { ok: false, message: '이메일 형식이 올바르지 않습니다.' };
   }
-  if (values.연락처 && !/^010-\d{4}-\d{4}$/.test(values.연락처)) {
+  if (values.phone && !/^010-\d{4}-\d{4}$/.test(values.phone)) {
     return { ok: false, message: '연락처는 010-0000-0000 형식이어야 합니다.' };
   }
-  if (values['게시 시작일'] && values['게시 종료일'] && values['게시 종료일'] < values['게시 시작일']) {
+  if (options.formKey === 'noticeRegister' && values.startDate && values.endDate && values.endDate < values.startDate) {
     return { ok: false, message: '게시 종료일은 시작일보다 이전일 수 없습니다.' };
   }
-  if (values.시작일 && values.종료일 && values.종료일 < values.시작일) {
+  if (options.formKey === 'scheduleRegister' && values.startDate && values.endDate && values.endDate < values.startDate) {
     return { ok: false, message: '종료일은 시작일보다 이전일 수 없습니다.' };
   }
-  if (options.formKey === 'scheduleRegister' && values.시작일 && values.종료일 && values.종료일 === values.시작일) {
-    const isAllDay = toYn(values['종일 일정 여부']) === 'Y';
-    const startTime = isAllDay ? '00:00' : values['시작 시간'];
-    const endTime = isAllDay ? '23:59' : values['종료 시간'];
+  if (options.formKey === 'scheduleRegister' && values.startDate && values.endDate && values.endDate === values.startDate) {
+    const isAllDay = toYn(values.allDayYn) === 'Y';
+    const startTime = isAllDay ? '00:00' : values.startTime;
+    const endTime = isAllDay ? '23:59' : values.endTime;
     if (startTime && endTime && endTime < startTime) {
       return { ok: false, message: '종료 시간은 시작 시간보다 이전일 수 없습니다.' };
     }
@@ -408,34 +414,34 @@ function validateForm(config, values, lists, options = {}) {
     const conflict = lists.reservations.rows.some((row) => {
       if (row === options.editingRow || ['반려', '취소'].includes(row[8])) return false;
       const sameType = row[1] === options.selectedChip;
-      const sameResource = row[2] === values['자원 선택'];
-      const sameDate = row[5] === values.예약일;
+      const sameResource = row[2] === values.resourceName;
+      const sameDate = row[5] === values.reservationDate;
       const [start = '', end = ''] = String(row[6] ?? '').split('~');
-      return sameType && sameResource && sameDate && values['시작 시간'] < end && values['종료 시간'] > start;
+      return sameType && sameResource && sameDate && values.startTime < end && values.endTime > start;
     });
     if (conflict) return { ok: false, message: '이미 예약된 시간입니다.' };
   }
-  if (values.아이디 && lists.users.rows.some((row) => row !== options.editingRow && row[1] === values.아이디)) {
+  if (values.loginId && lists.users.rows.some((row) => row !== options.editingRow && row[1] === values.loginId)) {
     return { ok: false, message: '이미 사용 중인 아이디입니다.' };
   }
-  if (values.이메일 && lists.users.rows.some((row) => row !== options.editingRow && row[5] === values.이메일)) {
+  if (values.email && lists.users.rows.some((row) => row !== options.editingRow && row[5] === values.email)) {
     return { ok: false, message: '이미 사용 중인 이메일입니다.' };
   }
-  if (values['권한 코드'] && lists.roles.rows.some((row) => row !== options.editingRow && row[1] === values['권한 코드'])) {
+  if (values.roleCode && lists.roles.rows.some((row) => row !== options.editingRow && row[1] === values.roleCode)) {
     return { ok: false, message: '이미 사용 중인 권한 코드입니다.' };
   }
   if (options.formKey === 'menuEdit') {
-    if (values.메뉴명 && lists.menus.rows.some((row) => row !== options.editingRow && row[0] === values.메뉴명)) {
+    if (values.menuName && lists.menus.rows.some((row) => row !== options.editingRow && row[0] === values.menuName)) {
       return { ok: false, message: '이미 사용 중인 메뉴명입니다.' };
     }
-    if (values.URL && lists.menus.rows.some((row) => row !== options.editingRow && row[1] === values.URL)) {
+    if (values.menuUrl && lists.menus.rows.some((row) => row !== options.editingRow && row[1] === values.menuUrl)) {
       return { ok: false, message: '이미 사용 중인 메뉴 URL입니다.' };
     }
   }
-  if (values['양식 코드'] && lists.templates.rows.some((row) => row !== options.editingRow && row[1] === values['양식 코드'])) {
+  if (values.templateCode && lists.templates.rows.some((row) => row !== options.editingRow && row[1] === values.templateCode)) {
     return { ok: false, message: '이미 사용 중인 양식 코드입니다.' };
   }
-  if (values['코드 그룹 ID'] && lists.codes.rows.some((row) => row !== options.editingRow && row[1] === values['코드 그룹 ID'])) {
+  if (values.codeGroupId && lists.codes.rows.some((row) => row !== options.editingRow && row[1] === values.codeGroupId)) {
     return { ok: false, message: '이미 사용 중인 코드 그룹 ID입니다.' };
   }
 
@@ -454,10 +460,10 @@ function getDynamicOptions(formKey, lists, resources, selectedChip) {
     .map((resource) => ({ value: resource.resourceName, label: resource.resourceName }))
     .filter((option, index, options) => option.value && options.findIndex((item) => item.value === option.value) === index);
   return {
-    '게시판 ID': boardOptions,
-    수신자: userOptions,
-    담당자: userOptions,
-    '자원 선택': resourceOptions,
+    boardId: boardOptions,
+    receiveId: userOptions,
+    assigneeId: userOptions,
+    resourceName: resourceOptions,
   };
 }
 
@@ -492,24 +498,23 @@ function FieldGrid({ fields, placeholders = {}, values, onChange, dynamicOptions
   return (
     <div className="field-grid">
       {fields.map((field) => {
-        const label = field.replace(' *', '');
-        const required = field.includes('*');
+        const { name, label, required = false } = normalizeField(field);
         const large = ['내용', '업무 내용', '사용 목적'].includes(label);
-        const options = dynamicOptions[label] ?? selectOptions[label];
+        const options = dynamicOptions[name] ?? selectOptions[name];
 
         return (
-          <label className={large ? 'field large' : 'field'} key={field}>
+          <label className={large ? 'field large' : 'field'} key={name}>
             <span>
               {label}
               {required ? <b>*</b> : null}
             </span>
             {large ? (
-              <textarea value={values[label] ?? ''} onChange={(event) => onChange(label, event.target.value)} />
+              <textarea value={values[name] ?? ''} onChange={(event) => onChange(name, event.target.value)} />
             ) : options ? (
               <select
                 required={required}
-                value={values[label] ?? ''}
-                onChange={(event) => onChange(label, event.target.value)}
+                value={values[name] ?? ''}
+                onChange={(event) => onChange(name, event.target.value)}
               >
                 <option value="">선택</option>
                 {options.map((option) => (
@@ -520,11 +525,11 @@ function FieldGrid({ fields, placeholders = {}, values, onChange, dynamicOptions
               </select>
             ) : (
               <input
-                type={dateFields.has(label) ? 'date' : timeFields.has(label) ? 'time' : 'text'}
-                placeholder={placeholders[label] ?? ''}
+                type={dateFields.has(name) ? 'date' : timeFields.has(name) ? 'time' : 'text'}
+                placeholder={placeholders[name] ?? ''}
                 required={required}
-                value={values[label] ?? ''}
-                onChange={(event) => onChange(label, event.target.value)}
+                value={values[name] ?? ''}
+                onChange={(event) => onChange(name, event.target.value)}
               />
             )}
           </label>
