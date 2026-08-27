@@ -61,6 +61,7 @@ export const listApi = {
   dashboard: () => api.get('/api/dashboard'),
   users: () => api.get('/api/users', { size: 200 }),
   roles: () => api.get('/api/roles'),
+  myRoleMenus: () => api.get('/api/roles/me/menus'),
   roleMenus: (roleId) => api.get(`/api/roles/${roleId}/menus`),
   menus: () => api.get('/api/menu'),
   notices: () => api.get('/api/notices', { size: 200 }),

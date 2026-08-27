@@ -56,6 +56,7 @@ export function AppProvider({ children }) {
   const [resources, setResources] = useState(() => loadStorage('resources', []));
   const [dashboard, setDashboard] = useState(null);
   const [permissions, setPermissions] = useState([]);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
   useEffect(() => {
     window.localStorage.removeItem('groupware-admin:user');
@@ -115,6 +116,7 @@ export function AppProvider({ children }) {
   const resetSessionData = () => {
     setDashboard(null);
     setPermissions([]);
+    setPermissionsLoaded(false);
   };
 
   const refreshBackendState = async () => {
@@ -132,8 +134,10 @@ export function AppProvider({ children }) {
       setResources(state.resources);
       setDashboard(state.dashboard);
       setPermissions(state.permissions);
+      setPermissionsLoaded(true);
       setApiStatus({ connected: true, loading: false, error: '' });
     } catch (error) {
+      setPermissionsLoaded(true);
       setApiStatus({ connected: false, loading: false, error: error.message });
     }
   };
@@ -146,8 +150,9 @@ export function AppProvider({ children }) {
     try {
       await authApi.login({ id, password });
       const session = await authApi.me();
+      setPermissionsLoaded(false);
       setUser(toUserSession(session));
-      setApiStatus({ connected: true, loading: false, error: '' });
+      setApiStatus({ connected: true, loading: true, error: '' });
       return { ok: true };
     } catch (error) {
       if (!error.status) {
@@ -368,8 +373,9 @@ export function AppProvider({ children }) {
       resources,
       dashboard,
       permissions,
+      permissionsLoaded,
     }),
-    [lists, schedules, messages, sentMessages, roleMenus, resources, dashboard, permissions],
+    [lists, schedules, messages, sentMessages, roleMenus, resources, dashboard, permissions, permissionsLoaded],
   );
 
   const actionsValue = useMemo(

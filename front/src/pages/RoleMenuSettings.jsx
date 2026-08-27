@@ -12,6 +12,8 @@ const permissionKeys = [
   ['delete', '삭제(D)'],
 ];
 
+const isPermissionChecked = (value) => value === true || String(value ?? '').trim().toUpperCase() === 'Y';
+
 function RoleMenuSettings() {
   const { pathname } = useLocation();
   const { user, lists, roleMenus, permissions, apiStatus, saveRoleMenus, refreshBackendState } = useApp();
@@ -41,10 +43,10 @@ function RoleMenuSettings() {
           menuId: item.menuId,
           name: item.menuName,
           url: item.menuUrl ?? '',
-          read: item.readYn === 'Y',
-          create: item.createYn === 'Y',
-          update: item.updateYn === 'Y',
-          delete: item.deleteYn === 'Y',
+          read: isPermissionChecked(item.readYn),
+          create: isPermissionChecked(item.createYn),
+          update: isPermissionChecked(item.updateYn),
+          delete: isPermissionChecked(item.deleteYn),
         })));
         setError('');
       })

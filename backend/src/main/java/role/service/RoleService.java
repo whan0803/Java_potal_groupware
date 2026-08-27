@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import user.entity.Role;
 import user.entity.User;
+import user.entity.UserRole;
 import user.repository.UserRepository;
 
 import java.util.*;
@@ -184,6 +185,64 @@ public class RoleService {
                 .toList();
     }
 
+    public List<RoleMenuResponse> getMyRoleMenus(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "사용자를 찾을 수 없습니다. userId=" + userId
+                        )
+                );
+
+        Set<Long> roleIds = user.getUserRoles().stream()
+                .map(UserRole::getRole)
+                .filter(role -> "Y".equals(role.getUseYn()))
+                .map(Role::getRoleId)
+                .collect(Collectors.toSet());
+
+        List<Menu> menus =
+                menuRepository.findByUseYnOrderByMenuLevelAscSortOrderAsc("Y");
+
+        if (roleIds.isEmpty()) {
+            return menus.stream()
+                    .map(menu -> RoleMenuResponse.from(menu, null))
+                    .toList();
+        }
+
+        Map<Long, PermissionSummary> permissionMap = new HashMap<>();
+        roleMenuRepository.findByRoleRoleIdIn(roleIds)
+                .forEach(roleMenu -> permissionMap
+                        .computeIfAbsent(
+                                roleMenu.getMenu().getMenuId(),
+                                menuId -> new PermissionSummary()
+                        )
+                        .merge(roleMenu));
+
+        return menus.stream()
+                .map(menu -> {
+                    PermissionSummary permission =
+                            permissionMap.getOrDefault(
+                                    menu.getMenuId(),
+                                    new PermissionSummary()
+                            );
+
+                    return new RoleMenuResponse(
+                            menu.getMenuId(),
+                            menu.getParentMenu() == null
+                                    ? null
+                                    : menu.getParentMenu().getMenuId(),
+                            menu.getMenuName(),
+                            menu.getMenuUrl(),
+                            menu.getMenuLevel(),
+                            menu.getSortOrder(),
+                            permission.readYn,
+                            permission.createYn,
+                            permission.updateYn,
+                            permission.deleteYn
+                    );
+                })
+                .toList();
+    }
+
     //권한별 메뉴 crud권한 전체 저장
     @Transactional
     public void saveRoleMenus(
@@ -309,5 +368,23 @@ public class RoleService {
         String trimmed = value.trim();
 
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static class PermissionSummary {
+        private String readYn = "N";
+        private String createYn = "N";
+        private String updateYn = "N";
+        private String deleteYn = "N";
+
+        private void merge(RoleMenu roleMenu) {
+            readYn = mergeYn(readYn, roleMenu.getReadYn());
+            createYn = mergeYn(createYn, roleMenu.getCreateYn());
+            updateYn = mergeYn(updateYn, roleMenu.getUpdateYn());
+            deleteYn = mergeYn(deleteYn, roleMenu.getDeleteYn());
+        }
+
+        private String mergeYn(String current, String next) {
+            return "Y".equals(current) || "Y".equals(next) ? "Y" : "N";
+        }
     }
 }

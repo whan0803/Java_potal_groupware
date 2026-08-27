@@ -1,13 +1,20 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth, useGroupwareData } from '../context/AppContext.jsx';
-import { canAccessRoute } from '../utils/permissions.js';
+import { canAccessRoute, isAdminUser } from '../utils/permissions.js';
 
 function ProtectedRoute() {
-  const { user } = useAuth();
-  const { permissions } = useGroupwareData();
+  const { user, apiStatus } = useAuth();
+  const { permissions, permissionsLoaded } = useGroupwareData();
   const location = useLocation();
 
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (apiStatus.connected && !permissionsLoaded && !isAdminUser(user)) {
+    return (
+      <section className="content-card">
+        <p>권한 정보를 불러오는 중입니다.</p>
+      </section>
+    );
+  }
   if (!canAccessRoute(user, permissions, location.pathname, location.search)) {
     return (
       <section className="content-card">

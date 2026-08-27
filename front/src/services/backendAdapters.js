@@ -4,6 +4,7 @@ const formatDate = (value) => String(value ?? '').slice(0, 10);
 const formatTime = (value) => String(value ?? '').slice(11, 16);
 const ynLabel = (value) => (value === 'Y' ? '사용' : '미사용');
 const ynValue = (value, yesLabel = '사용') => (value === yesLabel || value === 'Y' || value === '예' ? 'Y' : 'N');
+const permissionValue = (value) => (value === true || String(value ?? '').trim().toUpperCase() === 'Y' ? 'Y' : 'N');
 const importantLabel = (value) => (value === 'Y' ? '중요' : '일반');
 const attachmentLabel = (value) => (value === 'Y' ? '허용' : '미허용');
 const statusLabel = (value) => {
@@ -173,12 +174,7 @@ export async function fetchBackendState(user) {
 
   const value = (index, fallback) => (settled[index].status === 'fulfilled' ? settled[index].value : fallback);
   const roles = value(1, []);
-  const userRoleCodes = new Set([user.role, ...(user.roles ?? [])].map(normalizeRoleCode).filter(Boolean));
-  const matchedRoles = roles.filter((role) => userRoleCodes.has(normalizeRoleCode(role.roleCode)));
-  const roleMenuResults = await Promise.allSettled(matchedRoles.map((role) => listApi.roleMenus(role.roleId)));
-  const permissions = mergeRoleMenuPermissions(
-    roleMenuResults.flatMap((result) => (result.status === 'fulfilled' ? result.value : [])),
-  );
+  const permissions = mergeRoleMenuPermissions(await listApi.myRoleMenus());
   const resources = [...value(6, []), ...value(7, [])];
   const reservations = (
     await Promise.allSettled(resources.map((resource) => listApi.reservations(resource.resourceId)))
@@ -220,10 +216,10 @@ function mergeRoleMenuPermissions(items) {
     }
     merged.set(key, {
       ...current,
-      readYn: current.readYn === 'Y' || item.readYn === 'Y' ? 'Y' : 'N',
-      createYn: current.createYn === 'Y' || item.createYn === 'Y' ? 'Y' : 'N',
-      updateYn: current.updateYn === 'Y' || item.updateYn === 'Y' ? 'Y' : 'N',
-      deleteYn: current.deleteYn === 'Y' || item.deleteYn === 'Y' ? 'Y' : 'N',
+      readYn: permissionValue(current.readYn) === 'Y' || permissionValue(item.readYn) === 'Y' ? 'Y' : 'N',
+      createYn: permissionValue(current.createYn) === 'Y' || permissionValue(item.createYn) === 'Y' ? 'Y' : 'N',
+      updateYn: permissionValue(current.updateYn) === 'Y' || permissionValue(item.updateYn) === 'Y' ? 'Y' : 'N',
+      deleteYn: permissionValue(current.deleteYn) === 'Y' || permissionValue(item.deleteYn) === 'Y' ? 'Y' : 'N',
     });
   });
   return [...merged.values()];

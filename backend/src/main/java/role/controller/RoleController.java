@@ -86,6 +86,15 @@ public class RoleController {
         );
     }
 
+    @GetMapping("/me/menus")
+    public ResponseEntity<List<RoleMenuResponse>> getMyRoleMenus(
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                roleService.getMyRoleMenus(currentUserId(authentication))
+        );
+    }
+
     @PutMapping("/{roleId}/menus")
     public ResponseEntity<Void> saveRoleMenus(
             @PathVariable Long roleId,
