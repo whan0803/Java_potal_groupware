@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { api } from '../services/api.js';
 import { getCurrentUserId } from '../services/backendAdapters.js';
+import { canUsePermission } from '../utils/permissions.js';
 
 const permissionKeys = [
   ['read', '조회(R)'],
@@ -12,7 +13,8 @@ const permissionKeys = [
 ];
 
 function RoleMenuSettings() {
-  const { user, lists, roleMenus, apiStatus, saveRoleMenus, refreshBackendState } = useApp();
+  const { pathname } = useLocation();
+  const { user, lists, roleMenus, permissions, apiStatus, saveRoleMenus, refreshBackendState } = useApp();
   const [searchParams] = useSearchParams();
   const initialRole = searchParams.get('role') ?? lists.roles.rows[0]?.[1] ?? '';
   const [role, setRole] = useState(initialRole);
@@ -21,6 +23,7 @@ function RoleMenuSettings() {
 
   const selectedRoleRow = lists.roles.rows.find((roleRow) => roleRow[1] === role);
   const selectedRoleId = selectedRoleRow?._meta?.roleId;
+  const canSave = canUsePermission(user, permissions, pathname, 'update');
 
   useEffect(() => {
     const firstRole = lists.roles.rows[0]?.[1];
@@ -123,8 +126,13 @@ function RoleMenuSettings() {
         <button
           className="button primary"
           type="button"
+          disabled={!canSave}
           onClick={async () => {
             try {
+              if (!canSave) {
+                setError('수정 권한이 없습니다.');
+                return;
+              }
               if (!role) {
                 setError('권한을 먼저 선택하세요.');
                 return;

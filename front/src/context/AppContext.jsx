@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { listScreens } from '../data/listScreens.js';
-import { authApi } from '../services/api.js';
+import { api, authApi } from '../services/api.js';
 import {
   deleteBackendRow,
   fetchBackendState,
@@ -13,15 +13,33 @@ const AuthContext = createContext(null);
 const GroupwareDataContext = createContext(null);
 const GroupwareActionsContext = createContext(null);
 
+const formAuditTargets = {
+  userRegister: 'users',
+  roleRegister: 'roles',
+  menuEdit: 'menus',
+  noticeRegister: 'notices',
+  boardRegister: 'boards',
+  postRegister: 'posts',
+  reservationRegister: 'reservations',
+  resourceRegister: 'reservation_resources',
+  templateRegister: 'templates',
+  taskRegister: 'tasks',
+  scheduleRegister: 'schedules',
+  messageCompose: 'messages',
+  codeRegister: 'codes',
+};
+
 const adminTestAccounts = [
   { id: 'admin', password: 'admin123', name: '관리자', role: '시스템 관리자', enabled: true },
 ];
+
+const displayRoleCode = (roleCode) => String(roleCode ?? '').replace(/^ROLE_/, '');
 
 const toUserSession = (response) => ({
   userId: response.userId,
   id: response.loginId,
   name: response.userName,
-  role: response.roles?.[0] ?? '사용자',
+  role: displayRoleCode(response.roles?.[0]) || '사용자',
   roles: response.roles ?? [],
 });
 
@@ -56,7 +74,21 @@ export function AppProvider({ children }) {
   useEffect(() => saveStorage('roleMenus', roleMenus), [roleMenus]);
   useEffect(() => saveStorage('resources', resources), [resources]);
 
-  const writeAuditLog = (tableName, actionType, detail) => {
+  const writeAuditLog = async (tableName, actionType, detail) => {
+    if (apiStatus.connected && user?.userId) {
+      try {
+        await api.post('/api/audit-logs', {
+          tableName,
+          recordId: 0,
+          actionType,
+          actorId: user.userId,
+          afterData: { detail },
+        });
+      } catch (error) {
+        console.error('감사로그 저장에 실패했습니다.', error);
+      }
+    }
+
     setLists((current) => {
       const target = current.logs;
       const nextRows = [
@@ -93,7 +125,7 @@ export function AppProvider({ children }) {
       const sessionUser = toUserSession(session);
       setUser(sessionUser);
       const state = await fetchBackendState(sessionUser);
-      setLists((current) => ({ ...current, ...state.lists, logs: current.logs }));
+      setLists((current) => ({ ...current, ...state.lists }));
       setSchedules(state.schedules);
       setMessages(state.messages);
       setSentMessages(state.sentMessages);
@@ -166,6 +198,8 @@ export function AppProvider({ children }) {
     if (apiStatus.connected) {
       try {
         const response = await authApi.changePassword({ currentPassword, nextPassword, confirmPassword });
+        await writeAuditLog('users', 'PASSWORD_CHANGE', `${user?.id} 비밀번호 변경`);
+        await refreshBackendState();
         return { ok: true, message: response.message ?? '비밀번호가 변경되었습니다.' };
       } catch (error) {
         return { ok: false, message: error.message || '비밀번호 변경에 실패했습니다.' };
@@ -219,6 +253,7 @@ export function AppProvider({ children }) {
     const row = lists[listKey]?.rows[rowIndex];
     if (apiStatus.connected && row?._meta) {
       await updateBackendStatus(listKey, row, status, user);
+      await writeAuditLog(listKey, 'UPDATE', `${listKey} 상태 변경`);
       await refreshBackendState();
       return;
     }
@@ -244,6 +279,7 @@ export function AppProvider({ children }) {
     const removedRow = lists[listKey]?.rows[rowIndex];
     if (apiStatus.connected && removedRow?._meta) {
       await deleteBackendRow(listKey, removedRow, user);
+      await writeAuditLog(listKey, 'DELETE', `${listKey} 데이터 삭제`);
       await refreshBackendState();
       return;
     }
@@ -301,6 +337,9 @@ export function AppProvider({ children }) {
         selectedRoles: options.selectedRoles ?? [],
         files: options.files ?? [],
       });
+      const tableName = formAuditTargets[formKey] ?? formKey;
+      const actionType = options.editingRow ? 'UPDATE' : 'CREATE';
+      await writeAuditLog(tableName, actionType, `${tableName} 데이터 ${options.editingRow ? '수정' : '등록'}`);
       await refreshBackendState();
       return;
     }

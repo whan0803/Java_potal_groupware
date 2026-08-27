@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication(scanBasePackages = {
         "com.example.backend",
         "approval",
+        "auditLogs",
         "auth",
         "boards",
         "code",
@@ -29,6 +30,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 })
 @EntityScan(basePackages = {
         "approval.entity",
+        "auditLogs.entity",
         "boards.entity",
         "code.entity",
         "document.entity",
@@ -45,6 +47,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 })
 @EnableJpaRepositories(basePackages = {
         "approval.repository",
+        "auditLogs.repository",
         "boards.repository",
         "code.repository",
         "document.repository",

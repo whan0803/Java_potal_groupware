@@ -1,8 +1,9 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
+import { canUsePermission } from '../utils/permissions.js';
 
 function RoleDetail() {
-  const { lists, roleMenus } = useApp();
+  const { user, lists, roleMenus, permissions } = useApp();
   const [searchParams] = useSearchParams();
   const index = Number.parseInt(searchParams.get('index') ?? '0', 10);
   const row = lists.roles.rows[index] ?? lists.roles.rows[0];
@@ -20,6 +21,7 @@ function RoleDetail() {
 
   const roleCode = row[1];
   const permissionRows = roleMenus[roleCode] ?? [];
+  const canEditRoleMenus = canUsePermission(user, permissions, '/roles/menu', 'update');
 
   return (
     <div className="role-detail-grid">
@@ -49,9 +51,11 @@ function RoleDetail() {
             <Link className="button secondary" to="/roles">
               목록
             </Link>
-            <Link className="button primary" to={`/roles/menu?role=${roleCode}`}>
-              수정
-            </Link>
+            {canEditRoleMenus ? (
+              <Link className="button primary" to={`/roles/menu?role=${roleCode}`}>
+                수정
+              </Link>
+            ) : null}
           </div>
         </div>
         <table>

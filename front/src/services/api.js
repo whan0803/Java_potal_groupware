@@ -75,6 +75,7 @@ export const listApi = {
   receivedMessages: (userId) => api.get('/api/messages/received', { userId, size: 200 }),
   sentMessages: (userId) => api.get('/api/messages/sent', { userId, size: 200 }),
   codes: () => api.get('/api/common-codes'),
+  auditLogs: () => api.get('/api/audit-logs', { size: 200 }),
 };
 
 export const attachmentApi = {

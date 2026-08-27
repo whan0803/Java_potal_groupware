@@ -49,6 +49,11 @@ const statusValue = (value) => {
 
 const withMeta = (row, meta) => Object.assign(row, { _meta: meta });
 const page = (response) => getPageItems(response);
+const normalizeRoleCode = (roleCode) => {
+  const normalized = String(roleCode ?? '').trim().toUpperCase();
+  if (!normalized) return '';
+  return normalized.startsWith('ROLE_') ? normalized : `ROLE_${normalized}`;
+};
 const loadUserDepartments = () => {
   try {
     return JSON.parse(window.localStorage.getItem('groupware-admin:userDepartments') ?? '{}');
@@ -163,12 +168,13 @@ export async function fetchBackendState(user) {
     listApi.sentMessages(userId),
     listApi.codes(),
     listApi.dashboard(),
+    listApi.auditLogs(),
   ]);
 
   const value = (index, fallback) => (settled[index].status === 'fulfilled' ? settled[index].value : fallback);
   const roles = value(1, []);
-  const userRoleCodes = new Set([user.role, ...(user.roles ?? [])].filter(Boolean));
-  const matchedRoles = roles.filter((role) => userRoleCodes.has(role.roleCode));
+  const userRoleCodes = new Set([user.role, ...(user.roles ?? [])].map(normalizeRoleCode).filter(Boolean));
+  const matchedRoles = roles.filter((role) => userRoleCodes.has(normalizeRoleCode(role.roleCode)));
   const roleMenuResults = await Promise.allSettled(matchedRoles.map((role) => listApi.roleMenus(role.roleId)));
   const permissions = mergeRoleMenuPermissions(
     roleMenuResults.flatMap((result) => (result.status === 'fulfilled' ? result.value : [])),
@@ -191,6 +197,7 @@ export async function fetchBackendState(user) {
       templates: mapTemplates(value(9, [])),
       tasks: mapTasks(value(10, { content: [] })),
       codes: mapCodes(value(14, [])),
+      logs: mapAuditLogs(value(16, { content: [] })),
     },
     resources,
     schedules: value(11, []),
@@ -398,6 +405,26 @@ function mapCodes(items) {
     ], item),
   );
   return withRows('코드 그룹명 검색', ['No', '코드 그룹 ID', '그룹명', '설명', '사용여부', '관리'], rows);
+}
+
+function mapAuditLogs(response) {
+  const rows = page(response).map((item, index) =>
+    [
+      String(index + 1),
+      item.tableName,
+      item.actionType,
+      String(item.actorId ?? '-'),
+      formatDate(item.createdAt),
+      auditLogDetail(item),
+      '상세',
+    ],
+  );
+  return withRows('테이블명·작업자 검색', ['No', '테이블명', '작업 유형', '작업자', '작업 시간', '변경 내용', '관리'], rows);
+}
+
+function auditLogDetail(item) {
+  if (item.recordId && item.recordId !== 0) return `${item.tableName}#${item.recordId}`;
+  return `${item.tableName} ${item.actionType}`;
 }
 
 function mapReceivedMessages(response) {

@@ -188,17 +188,18 @@ public class RoleService {
     @Transactional
     public void saveRoleMenus(
             Long roleId,
-            RoleSaveRequest request
+            RoleSaveRequest request,
+            Long actorId
     ) {
         Role role = findRole(roleId);
 
         validateDuplicateMenuIds(request.menus());
 
-        User createdBy = userRepository.findById(request.userId())
+        User createdBy = userRepository.findById(actorId)
                 .orElseThrow(() ->
                         new IllegalArgumentException(
                                 "처리자 정보를 찾을 수 없습니다. userId="
-                                        + request.userId()
+                                        + actorId
                         )
                 );
 
@@ -240,6 +241,7 @@ public class RoleService {
         }
 
         roleMenuRepository.deleteByRoleRoleId(roleId);
+        roleMenuRepository.flush();
         roleMenuRepository.saveAll(roleMenus);
     }
 

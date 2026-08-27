@@ -7,7 +7,9 @@ import role.dto.*;
 import role.service.RoleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import security.CustomUserDetails;
 
 import java.util.List;
 import java.util.Map;
@@ -87,12 +89,23 @@ public class RoleController {
     @PutMapping("/{roleId}/menus")
     public ResponseEntity<Void> saveRoleMenus(
             @PathVariable Long roleId,
-            @Valid @RequestBody RoleSaveRequest request
+            @Valid @RequestBody RoleSaveRequest request,
+            Authentication authentication
     ){
-        roleService.saveRoleMenus(roleId, request);
+        roleService.saveRoleMenus(
+                roleId,
+                request,
+                currentUserId(authentication)
+        );
 
         return ResponseEntity.noContent().build();
     }
 
+    private Long currentUserId(Authentication authentication) {
+        CustomUserDetails principal =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        return principal.getUserId();
+    }
 
 }
