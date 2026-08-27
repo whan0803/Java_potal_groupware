@@ -61,9 +61,10 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createUser(
-            @Valid @RequestBody UserCreateRequest request
+            @Valid @RequestBody UserCreateRequest request,
+            Authentication authentication
             ) {
-        Long actorId = null;
+        Long actorId = currentUserId(authentication);
 
         Long userId = userService.createUser(request, actorId);
 
@@ -77,9 +78,11 @@ public class UserController {
     @PutMapping("/{userId}")
     public Map<String, String> updateUser(
             @PathVariable Long userId,
-            @Valid @RequestBody UserUpdateRequest request
+            @Valid @RequestBody UserUpdateRequest request,
+            Authentication authentication
             ){
-        Long actorId = null;
+
+        Long actorId = currentUserId(authentication);
 
         userService.updateUser(userId, request, actorId);
 
@@ -89,9 +92,10 @@ public class UserController {
 
     @PatchMapping("/{userId}/deactivate")
     public Map<String, String> deactivateUser(
-            @PathVariable Long userId
+            @PathVariable Long userId,
+            Authentication authentication
     ) {
-        Long actorId = null;
+        Long actorId = currentUserId(authentication);
 
         userService.deactivateUser(userId, actorId);
 
@@ -101,9 +105,10 @@ public class UserController {
     @PutMapping("/{userId}/roles")
     public Map<String, String> updateRoles(
             @PathVariable Long userId,
-            @Valid @RequestBody UserRoleUpdateRequest request
+            @Valid @RequestBody UserRoleUpdateRequest request,
+            Authentication authentication
             ){
-        Long actorId = null;
+        Long actorId = currentUserId(authentication);
 
         userService.updateRoles(userId, request, actorId);
 
@@ -113,9 +118,10 @@ public class UserController {
 
     @PatchMapping("/{userId}/reset-password")
     public Map<String, String> resetPassword(
-            @PathVariable Long userId
+            @PathVariable Long userId,
+            Authentication authentication
     ) {
-        Long actorId = null;
+        Long actorId = currentUserId(authentication);
 
         String temporaryPassword =
         userService.resetPassword(userId, actorId);
@@ -133,17 +139,20 @@ public class UserController {
             @Valid @RequestBody PasswordChangeRequest request,
             Authentication authentication
     ) {
-        CustomUserDetails principal =
-                (CustomUserDetails) authentication.getPrincipal();
-
         userService.changePassword(
-                principal.getUserId(),
+                currentUserId(authentication),
                 request
         );
 
         return Map.of("message", "비밀번호가 변경되었습니다.");
     }
 
+    private Long currentUserId(Authentication authentication) {
+        CustomUserDetails principal =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        return principal.getUserId();
+    }
 
 
 }
