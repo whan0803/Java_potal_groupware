@@ -1,5 +1,6 @@
 import DataTable from '../components/DataTable.jsx';
 import { useApp } from '../context/AppContext.jsx';
+import { api } from '../services/api.js';
 
 const toApprovalRow = (reservation) => {
   const [no, type, resourceName, requester, department, date, time, purpose, status] = reservation;
@@ -23,7 +24,7 @@ const toApprovalRow = (reservation) => {
 };
 
 function ReservationApprove() {
-  const { lists, updateRowStatus } = useApp();
+  const { user, lists, refreshBackendState } = useApp();
   const approvalRows = lists.reservations.rows.map(toApprovalRow);
   const waitingCount = approvalRows.filter(({ status }) => status === '대기').length;
   const reservationRows = approvalRows.map(({ cells }) => cells);
@@ -34,14 +35,21 @@ function ReservationApprove() {
       <DataTable
         columns={['유형', '자원명', '신청자', '부서', '예약일', '시간', '목적', '신청일', '상태', '처리']}
         rows={reservationRows}
-        onAction={async (row) => {
+        listKey="reservationApproval"
+        onAction={async (row, action) => {
           const selected = approvalRows.find(({ cells }) => cells === row);
           if (!selected || selected.status !== '대기') return;
           const rowIndex = lists.reservations.rows.findIndex(([no]) => no === selected.no);
           if (rowIndex < 0) return;
           try {
-            await updateRowStatus('reservations', rowIndex, '승인');
-            window.alert('예약이 승인 처리되었습니다.');
+            const nextStatus = action === '반려' ? '반려' : '승인';
+            const reservationId = lists.reservations.rows[rowIndex]._meta?.reservationId;
+            await api.patch(`/api/reservations/${reservationId}/${action === '반려' ? 'reject' : 'approve'}`, {
+              approverId: user.userId,
+              approvalComment: '',
+            });
+            await refreshBackendState();
+            window.alert(`예약이 ${nextStatus} 처리되었습니다.`);
           } catch (error) {
             window.alert(error.message || '처리 중 오류가 발생했습니다.');
           }

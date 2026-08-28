@@ -10,6 +10,10 @@ public record ApprovalListResponse(
 
         String documentNumber,
 
+        Long templateId,
+
+        String templateName,
+
         String title,
 
         Long drafterId,
@@ -17,6 +21,8 @@ public record ApprovalListResponse(
         String drafterName,
 
         String approvalStatus,
+
+        String approvalStatusName,
 
         LocalDateTime requestedAt,
 
@@ -29,12 +35,23 @@ public record ApprovalListResponse(
     public static ApprovalListResponse from(
             ApprovalDocument document
     ) {
+        return from(document, document.getApprovalStatus());
+    }
+
+    public static ApprovalListResponse from(
+            ApprovalDocument document,
+            String approvalStatusName
+    ) {
 
         return new ApprovalListResponse(
 
                 document.getApprovalDocumentId(),
 
                 document.getDocumentNumber(),
+
+                document.getTemplate() == null ? null : document.getTemplate().getTemplateId(),
+
+                document.getTemplate() == null ? null : document.getTemplate().getTemplateName(),
 
                 document.getTitle(),
 
@@ -43,6 +60,8 @@ public record ApprovalListResponse(
                 document.getDrafter().getUserName(),
 
                 document.getApprovalStatus(),
+
+                approvalStatusName,
 
                 document.getRequestedAt(),
 

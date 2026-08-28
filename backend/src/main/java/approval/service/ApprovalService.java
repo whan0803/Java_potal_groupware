@@ -5,6 +5,7 @@ import approval.entity.ApprovalDocument;
 import approval.entity.ApprovalLine;
 import approval.repository.ApprovalDocumentRepository;
 import approval.repository.ApprovalLineRepository;
+import code.repository.CommonCodeDetailRepository;
 import document.entity.DocumentTemplate;
 import document.repository.DocumentTemplateRepository;
 import jakarta.persistence.criteria.JoinType;
@@ -32,6 +33,7 @@ public class ApprovalService {
     private final ApprovalLineRepository approvalLineRepository;
     private final DocumentTemplateRepository documentTemplateRepository;
     private final UserRepository userRepository;
+    private final CommonCodeDetailRepository commonCodeDetailRepository;
 
 
 
@@ -87,7 +89,10 @@ public class ApprovalService {
 
         return approvalDocumentRepository
                 .findAll(spec, pageable)
-                .map(ApprovalListResponse::from);
+                .map(document -> ApprovalListResponse.from(
+                        document,
+                        approvalStatusName(document.getApprovalStatus())
+                ));
     }
 
 
@@ -109,7 +114,8 @@ public class ApprovalService {
 
         return ApprovalDetailResponse.from(
                 document,
-                lines
+                lines,
+                approvalStatusName(document.getApprovalStatus())
         );
     }
 
@@ -634,6 +640,25 @@ public class ApprovalService {
                         )
                 )
                 .orElse(false);
+    }
+
+
+    private String approvalStatusName(String status) {
+        return commonCodeDetailRepository
+                .findByCodeGroupIdAndCodeValueAndUseYn(
+                        "APPROVAL_STATUS",
+                        status,
+                        "Y"
+                )
+                .map(detail -> detail.getCodeName())
+                .orElseGet(() -> switch (status) {
+                    case "DRAFT" -> "임시저장";
+                    case "IN_PROGRESS" -> "진행중";
+                    case "APPROVED" -> "승인";
+                    case "REJECTED" -> "반려";
+                    case "CANCELED" -> "취소";
+                    default -> status;
+                });
     }
 
 

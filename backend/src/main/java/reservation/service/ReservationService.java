@@ -3,6 +3,7 @@ package reservation.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import code.repository.CommonCodeDetailRepository;
 import reservation.dto.ReservationCreateRequest;
 import reservation.dto.ReservationResponse;
 import reservation.dto.ReservationStatusRequest;
@@ -27,6 +28,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationResourceRepository resourceRepository;
     private final UserRepository userRepository;
+    private final CommonCodeDetailRepository commonCodeDetailRepository;
 
     // 회의실/차량 목록 조회
     public List<ResourceResponse> getResources(
@@ -78,7 +80,10 @@ public class ReservationService {
                         "Y"
                 )
                 .stream()
-                .map(ReservationResponse::from)
+                .map(reservation -> ReservationResponse.from(
+                        reservation,
+                        reservationStatusName(reservation.getReservationStatus())
+                ))
                 .toList();
     }
 
@@ -135,8 +140,11 @@ public class ReservationService {
     public ReservationResponse detail(
             Long id
     ) {
+        Reservation reservation = findReservation(id);
+
         return ReservationResponse.from(
-                findReservation(id)
+                reservation,
+                reservationStatusName(reservation.getReservationStatus())
         );
     }
 
@@ -200,14 +208,38 @@ public class ReservationService {
     }
 
     @Transactional
+    public void approve(
+            Long id,
+            ReservationStatusRequest request
+    ) {
+        processStatus(id, request, "APPROVED");
+    }
+
+    @Transactional
+    public void reject(
+            Long id,
+            ReservationStatusRequest request
+    ) {
+        processStatus(id, request, "REJECTED");
+    }
+
+    @Transactional
     public void processStatus(
             Long id,
             ReservationStatusRequest request
     ) {
+        processStatus(id, request, request.status());
+    }
+
+    private void processStatus(
+            Long id,
+            ReservationStatusRequest request,
+            String status
+    ) {
         Reservation reservation =
                 findReservation(id);
 
-        if (!List.of("APPROVED", "REJECTED").contains(request.status())) {
+        if (!List.of("APPROVED", "REJECTED").contains(status)) {
             throw new IllegalArgumentException(
                     "예약 상태는 APPROVED 또는 REJECTED만 가능합니다."
             );
@@ -228,7 +260,7 @@ public class ReservationService {
                         );
 
         reservation.process(
-                request.status(),
+                status,
                 approver,
                 request.approvalComment()
         );
@@ -377,5 +409,22 @@ public class ReservationService {
                     "이미 취소된 예약입니다."
             );
         }
+    }
+
+    private String reservationStatusName(String status) {
+        return commonCodeDetailRepository
+                .findByCodeGroupIdAndCodeValueAndUseYn(
+                        "RESERVATION_STATUS",
+                        status,
+                        "Y"
+                )
+                .map(detail -> detail.getCodeName())
+                .orElseGet(() -> switch (status) {
+                    case "REQUESTED" -> "대기";
+                    case "APPROVED" -> "승인";
+                    case "REJECTED" -> "반려";
+                    case "CANCELED", "CANCELLED" -> "취소";
+                    default -> status;
+                });
     }
 }

@@ -94,12 +94,18 @@ async function handleTableAction({ listKey, action, row, rowIndex, user, navigat
     return;
   }
 
-  if (listKey === 'approval' && action === '결재 처리') {
-    const approve = window.confirm('승인하려면 확인, 반려하려면 취소를 누르세요.');
-    const comment = approve ? '' : window.prompt('반려 사유를 입력하세요.', '') ?? '';
-    await api.patch(`/api/approvals/${row._meta.approvalDocumentId}/${
-      approve ? 'approve' : 'reject'
-    }`, {
+  if (listKey === 'approval' && ['승인', '반려', '결재 처리'].includes(action)) {
+    const approve = action !== '반려';
+    if (approve && !window.confirm('이 결재 문서를 승인하시겠습니까?')) return;
+
+    const comment = approve ? '' : window.prompt('반려 사유를 입력하세요.', '');
+    if (!approve && comment === null) return;
+    if (!approve && !comment.trim()) {
+      window.alert('반려 사유를 입력해야 반려 처리할 수 있습니다.');
+      return;
+    }
+
+    await api.patch(`/api/approvals/${row._meta.approvalDocumentId}/${approve ? 'approve' : 'reject'}`, {
       approverId: user.userId,
       comment,
     });

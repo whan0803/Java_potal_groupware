@@ -181,13 +181,14 @@ public class DocumentTemplateService {
 
     @Transactional
     public void delete(
-            Long templateId
+            Long templateId,
+            Long updatedBy
     ){
 
         DocumentTemplate template =
                 findTemplate(templateId);
 
-        repository.delete(template);
+        template.delete(updatedBy);
 
     }
 

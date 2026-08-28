@@ -26,6 +26,8 @@ public record ApprovalDetailResponse(
 
         String approvalStatus,
 
+        String approvalStatusName,
+
         LocalDateTime requestedAt,
 
         LocalDateTime completedAt,
@@ -39,6 +41,14 @@ public record ApprovalDetailResponse(
     public static ApprovalDetailResponse from(
             ApprovalDocument document,
             List<ApprovalLine> lines
+    ) {
+        return from(document, lines, document.getApprovalStatus());
+    }
+
+    public static ApprovalDetailResponse from(
+            ApprovalDocument document,
+            List<ApprovalLine> lines,
+            String approvalStatusName
     ) {
 
         Long templateId = null;
@@ -72,6 +82,8 @@ public record ApprovalDetailResponse(
                 document.getContent(),
 
                 document.getApprovalStatus(),
+
+                approvalStatusName,
 
                 document.getRequestedAt(),
 

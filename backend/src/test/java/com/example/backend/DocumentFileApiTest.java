@@ -112,13 +112,14 @@ class DocumentFileApiTest {
                 .andExpect(jsonPath("$.templateContent").value("updated content"));
 
         mockMvc.perform(delete("/api/document-templates/{templateId}", templateId)
-                        .session(session))
+                        .session(session)
+                        .param("userId", userId.toString()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/document-templates/{templateId}", templateId)
                         .session(session))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("문서양식을 찾을 수 없습니다."));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.useYn").value("N"));
     }
 
     @Test

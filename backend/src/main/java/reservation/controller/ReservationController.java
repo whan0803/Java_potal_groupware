@@ -132,6 +132,32 @@ public class ReservationController {
 
     // 승인 / 반려
 
+    @PatchMapping("/{id}/approve")
+    public ResponseEntity<Void> approve(
+            @PathVariable Long id,
+            @Valid @RequestBody ReservationStatusRequest request
+    ){
+
+        service.approve(id, request);
+
+        return ResponseEntity.ok().build();
+
+    }
+
+
+    @PatchMapping("/{id}/reject")
+    public ResponseEntity<Void> reject(
+            @PathVariable Long id,
+            @Valid @RequestBody ReservationStatusRequest request
+    ){
+
+        service.reject(id, request);
+
+        return ResponseEntity.ok().build();
+
+    }
+
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<Void> processStatus(
             @PathVariable Long id,

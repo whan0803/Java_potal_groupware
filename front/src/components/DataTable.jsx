@@ -65,12 +65,34 @@ function renderCell(cell, options = {}) {
     );
   }
 
+  if (options.isReservationApprovalAction) {
+    if (cell === '승인 / 반려' && options.canUpdate) {
+      return (
+        <span className="role-action-group">
+          <button className="table-action" type="button" onClick={() => options.onAction('승인')}>
+            승인
+          </button>
+          <button className="table-action danger" type="button" onClick={() => options.onAction('반려')}>
+            반려
+          </button>
+        </span>
+      );
+    }
+
+    return <span className="muted-cell">처리 완료</span>;
+  }
+
   if (options.isApprovalAction) {
     if (cell === '결재 처리' && options.canUpdate) {
       return (
-        <button className="table-action" type="button" onClick={options.onAction}>
-          결재 처리
-        </button>
+        <span className="role-action-group">
+          <button className="table-action" type="button" onClick={() => options.onAction('승인')}>
+            승인
+          </button>
+          <button className="table-action danger" type="button" onClick={() => options.onAction('반려')}>
+            반려
+          </button>
+        </span>
       );
     }
 
@@ -156,6 +178,7 @@ function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDele
                     isPostAction: listKey === 'posts' && cellIndex === actionColumnIndex,
                     isTaskAction: listKey === 'tasks' && cellIndex === actionColumnIndex,
                     isReservationAction: listKey === 'reservations' && cellIndex === actionColumnIndex,
+                    isReservationApprovalAction: listKey === 'reservationApproval' && cellIndex === actionColumnIndex,
                     isApprovalAction: listKey === 'approval' && cellIndex === actionColumnIndex,
                     isRoleAction: listKey === 'roles' && cellIndex === actionColumnIndex,
                     isAction: cellIndex === actionColumnIndex,

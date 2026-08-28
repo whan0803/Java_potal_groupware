@@ -29,11 +29,22 @@ public record ReservationResponse(
 
         String status
 
+        ,
+
+        String statusName
+
 
 ){
 
     public static ReservationResponse from(
             Reservation reservation
+    ){
+        return from(reservation, reservation.getReservationStatus());
+    }
+
+    public static ReservationResponse from(
+            Reservation reservation,
+            String statusName
     ){
 
         return new ReservationResponse(
@@ -56,7 +67,9 @@ public record ReservationResponse(
 
                 reservation.getEndDatetime(),
 
-                reservation.getReservationStatus()
+                reservation.getReservationStatus(),
+
+                statusName
 
         );
 

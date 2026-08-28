@@ -44,7 +44,19 @@ function ApprovalList() {
   const processApproval = async (row, approve) => {
     const documentId = row._meta?.approvalDocumentId;
     if (!documentId) return;
-    const comment = approve ? '' : window.prompt('반려 사유를 입력하세요.', '') ?? '';
+    if (approve && !window.confirm('이 결재 문서를 승인하시겠습니까?')) {
+      return;
+    }
+
+    const comment = approve ? '' : window.prompt('반려 사유를 입력하세요.', '');
+    if (!approve && comment === null) {
+      return;
+    }
+    if (!approve && !comment.trim()) {
+      window.alert('반려 사유를 입력해야 반려 처리할 수 있습니다.');
+      return;
+    }
+
     setProcessingId(documentId);
     setError('');
 
@@ -57,7 +69,9 @@ function ApprovalList() {
       setDetail(null);
       window.alert(approve ? '승인되었습니다.' : '반려되었습니다.');
     } catch (processError) {
-      setError(processError.message || '결재 처리에 실패했습니다.');
+      const message = processError.message || '결재 처리에 실패했습니다.';
+      setError(message);
+      window.alert(message);
     } finally {
       setProcessingId(null);
     }
@@ -113,7 +127,7 @@ function ApprovalList() {
                   </td>
                   <td>{row[3]}</td>
                   <td>{row[5]}</td>
-                  <td><span className={`pill ${approvalStatusLabels[status] ?? row[6]}`}>{approvalStatusLabels[status] ?? row[6]}</span></td>
+                  <td><span className={`pill ${row._meta?.approvalStatusName ?? approvalStatusLabels[status] ?? row[6]}`}>{row._meta?.approvalStatusName ?? approvalStatusLabels[status] ?? row[6]}</span></td>
                   <td>
                     {canProcess ? (
                       <span className="role-action-group">
@@ -191,7 +205,7 @@ function ApprovalDetailModal({ detail, processing, canProcess, onClose, onApprov
             </div>
             <div>
               <dt>상태</dt>
-              <dd><span className={`pill ${approvalStatusLabels[status] ?? detail.approvalStatus}`}>{approvalStatusLabels[status] ?? detail.approvalStatus}</span></dd>
+              <dd><span className={`pill ${detail.approvalStatusName ?? approvalStatusLabels[status] ?? detail.approvalStatus}`}>{detail.approvalStatusName ?? approvalStatusLabels[status] ?? detail.approvalStatus}</span></dd>
             </div>
           </dl>
           <div className="approval-detail-content">

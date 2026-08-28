@@ -114,9 +114,10 @@ public class DocumentTemplate {
 
 
 
-    public void delete(){
+    public void delete(Long updatedBy){
 
         this.useYn = "N";
+        this.updatedBy = updatedBy;
 
     }
 }

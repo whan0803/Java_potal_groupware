@@ -332,7 +332,7 @@ function mapReservations(items, resources) {
       formatDate(item.startDatetime),
       `${formatTime(item.startDatetime)}~${formatTime(item.endDatetime)}`,
       item.purpose ?? item.title ?? '',
-      statusLabel(item.status),
+      item.statusName ?? statusLabel(item.status),
       '상세',
     ], { ...item, resource });
   });
@@ -342,7 +342,8 @@ function mapReservations(items, resources) {
 function mapApprovals(items) {
   const rows = page(items).map((item, index) =>
     {
-      const approvalStatus = approvalStatusLabel(item.approvalStatus ?? item.status);
+      const approvalStatus = item.approvalStatusName ?? approvalStatusLabel(item.approvalStatus ?? item.status);
+      const rawApprovalStatus = item.approvalStatus ?? item.status;
       return withMeta([
         String(index + 1),
         item.templateName ?? item.documentType ?? '-',
@@ -351,7 +352,7 @@ function mapApprovals(items) {
         item.departmentName ?? '-',
         formatDate(item.createdAt ?? item.createAt),
         approvalStatus,
-        approvalStatus === '진행중' ? '결재 처리' : '처리 완료',
+        rawApprovalStatus === 'IN_PROGRESS' ? '결재 처리' : '처리 완료',
       ], item);
     }
   );
@@ -647,7 +648,7 @@ export async function deleteBackendRow(listKey, row, user) {
     boards: () => api.patch(`/api/boards/${meta.boardId}/disable`, { userId }),
     posts: () => api.patch(`/api/posts/${meta.postId}/delete`, { userId, admin: isAdminUser(user) }),
     reservations: () => api.patch(`/api/reservations/${meta.reservationId}/cancel`),
-    templates: () => api.delete(`/api/document-templates/${meta.templateId}`),
+    templates: () => api.delete(`/api/document-templates/${meta.templateId}?userId=${userId}`),
     tasks: () => api.delete(`/api/tasks/${meta.taskId}`),
     codes: () => api.delete(`/api/common-codes/${meta.codeGroupId}`),
   };
@@ -660,8 +661,7 @@ export async function updateBackendStatus(listKey, row, status, user) {
   if (listKey === 'tasks') return api.patch(`/api/tasks/${meta.taskId}/status`, { taskStatus: statusValue(status) });
   if (listKey === 'approval' && status === '완료') return api.patch(`/api/approvals/${meta.approvalDocumentId ?? meta.approvalId}/approve`, { approverId: userId, comment: '' });
   if (listKey === 'reservations' && ['승인', '반려'].includes(status)) {
-    return api.patch(`/api/reservations/${meta.reservationId}/status`, {
-      status: status === '승인' ? 'APPROVED' : 'REJECTED',
+    return api.patch(`/api/reservations/${meta.reservationId}/${status === '승인' ? 'approve' : 'reject'}`, {
       approverId: userId,
       approvalComment: '',
     });

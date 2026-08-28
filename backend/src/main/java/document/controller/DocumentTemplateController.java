@@ -169,11 +169,12 @@ public class DocumentTemplateController {
     @DeleteMapping("/{templateId}")
     public ResponseEntity<Void> delete(
 
-            @PathVariable Long templateId
+            @PathVariable Long templateId,
+            @RequestParam(required = false) Long userId
 
     ){
 
-        service.delete(templateId);
+        service.delete(templateId, userId);
 
 
         return ResponseEntity.ok().build();
