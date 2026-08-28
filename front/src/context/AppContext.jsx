@@ -29,11 +29,40 @@ const formAuditTargets = {
   codeRegister: 'codes',
 };
 
+const formAuditIdKeys = {
+  userRegister: 'userId',
+  roleRegister: 'roleId',
+  menuEdit: 'menuId',
+  noticeRegister: 'noticeId',
+  boardRegister: 'boardId',
+  postRegister: 'postId',
+  reservationRegister: 'reservationId',
+  resourceRegister: 'resourceId',
+  templateRegister: 'templateId',
+  taskRegister: 'taskId',
+  scheduleRegister: 'scheduleId',
+  codeRegister: 'codeGroupId',
+};
+
 const adminTestAccounts = [
   { id: 'admin', password: 'admin123', name: '관리자', role: '시스템 관리자', enabled: true },
 ];
 
 const displayRoleCode = (roleCode) => String(roleCode ?? '').replace(/^ROLE_/, '');
+
+const toAuditData = (data) => {
+  if (data == null) return null;
+  try {
+    return JSON.parse(JSON.stringify(data));
+  } catch {
+    return { value: String(data) };
+  }
+};
+
+const getAuditRecordId = (formKey, editingRow) => {
+  const idKey = formAuditIdKeys[formKey];
+  return Number(editingRow?._meta?.[idKey]) || 0;
+};
 
 const toUserSession = (response) => ({
   userId: response.userId,
@@ -75,15 +104,19 @@ export function AppProvider({ children }) {
   useEffect(() => saveStorage('roleMenus', roleMenus), [roleMenus]);
   useEffect(() => saveStorage('resources', resources), [resources]);
 
-  const writeAuditLog = async (tableName, actionType, detail) => {
+  const writeAuditLog = async (tableName, actionType, detail, auditData = {}) => {
+    const beforeData = auditData.beforeData === undefined ? null : toAuditData(auditData.beforeData);
+    const afterData = auditData.afterData === undefined ? { detail } : toAuditData(auditData.afterData);
+
     if (apiStatus.connected && user?.userId) {
       try {
         await api.post('/api/audit-logs', {
           tableName,
-          recordId: 0,
+          recordId: auditData.recordId ?? 0,
           actionType,
+          beforeData,
+          afterData,
           actorId: user.userId,
-          afterData: { detail },
         });
       } catch (error) {
         console.error('감사로그 저장에 실패했습니다.', error);
@@ -258,7 +291,11 @@ export function AppProvider({ children }) {
     const row = lists[listKey]?.rows[rowIndex];
     if (apiStatus.connected && row?._meta) {
       await updateBackendStatus(listKey, row, status, user);
-      await writeAuditLog(listKey, 'UPDATE', `${listKey} 상태 변경`);
+      await writeAuditLog(listKey, 'UPDATE', `${listKey} 상태 변경`, {
+        recordId: row._meta[`${listKey.slice(0, -1)}Id`] ?? row._meta.id ?? 0,
+        beforeData: row._meta,
+        afterData: { ...row._meta, status },
+      });
       await refreshBackendState();
       return;
     }
@@ -284,7 +321,11 @@ export function AppProvider({ children }) {
     const removedRow = lists[listKey]?.rows[rowIndex];
     if (apiStatus.connected && removedRow?._meta) {
       await deleteBackendRow(listKey, removedRow, user);
-      await writeAuditLog(listKey, 'DELETE', `${listKey} 데이터 삭제`);
+      await writeAuditLog(listKey, 'DELETE', `${listKey} 데이터 삭제`, {
+        recordId: removedRow._meta[`${listKey.slice(0, -1)}Id`] ?? removedRow._meta.id ?? 0,
+        beforeData: removedRow._meta,
+        afterData: null,
+      });
       await refreshBackendState();
       return;
     }
@@ -344,7 +385,11 @@ export function AppProvider({ children }) {
       });
       const tableName = formAuditTargets[formKey] ?? formKey;
       const actionType = options.editingRow ? 'UPDATE' : 'CREATE';
-      await writeAuditLog(tableName, actionType, `${tableName} 데이터 ${options.editingRow ? '수정' : '등록'}`);
+      await writeAuditLog(tableName, actionType, `${tableName} 데이터 ${options.editingRow ? '수정' : '등록'}`, {
+        recordId: getAuditRecordId(formKey, options.editingRow),
+        beforeData: options.editingRow?._meta ?? null,
+        afterData: { detail: `${tableName} 데이터 ${options.editingRow ? '수정' : '등록'}`, values },
+      });
       await refreshBackendState();
       return;
     }

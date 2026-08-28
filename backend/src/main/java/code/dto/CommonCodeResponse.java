@@ -4,6 +4,7 @@ package code.dto;
 import code.entity.CommonCode;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 public record CommonCodeResponse(
@@ -18,13 +19,26 @@ public record CommonCodeResponse(
 
         LocalDateTime createdAt,
 
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+
+        Long detailCount,
+
+        List<CommonCodeDetailResponse> details
 
 ){
 
 
+    public static CommonCodeResponse from(CommonCode code){
+
+        return from(code, 0L, List.of());
+
+    }
+
+
     public static CommonCodeResponse from(
-            CommonCode code
+            CommonCode code,
+            Long detailCount,
+            List<CommonCodeDetailResponse> details
     ){
 
         return new CommonCodeResponse(
@@ -39,7 +53,11 @@ public record CommonCodeResponse(
 
                 code.getCreatedAt(),
 
-                code.getUpdatedAt()
+                code.getUpdatedAt(),
+
+                detailCount,
+
+                details
 
         );
 

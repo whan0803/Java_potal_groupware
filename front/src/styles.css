@@ -587,7 +587,9 @@ h1 {
 .toolbar input,
 .field input,
 .field textarea,
-.field select {
+.field select,
+.code-detail-row input,
+.code-detail-row select {
   width: 100%;
   border: 1px solid #dde3ed;
   border-radius: 3.5px;
@@ -771,6 +773,7 @@ tr:last-child td {
 .form-section + .form-section,
 .field-grid + .form-help,
 .field-grid + .upload-box,
+.field-grid + .code-detail-editor,
 .form-help + .upload-box {
   margin-top: 18px;
 }
@@ -806,7 +809,9 @@ tr:last-child td {
 }
 
 .field input,
-.field select {
+.field select,
+.code-detail-row input,
+.code-detail-row select {
   height: 33.5px;
   padding: 0 10px;
   font-size: 12.25px;
@@ -816,6 +821,34 @@ tr:last-child td {
   min-height: 103.5px;
   padding: 10px;
   resize: vertical;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.code-detail-table {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.code-detail-head,
+.code-detail-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) 72px 92px 62px;
+  gap: 8px;
+  align-items: center;
+}
+
+.code-detail-head {
+  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 14px;
 }
 
 .empty-strip,

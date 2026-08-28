@@ -86,7 +86,7 @@ export const formScreens = {
   resourceRegister: {
     width: 'medium',
     fields: [
-      { name: 'resourceType', label: '자원 유형', required: true },
+      { name: 'resourceType', label: '자원 유형', required: true, commonCodeGroup: 'RESOURCE_TYPE' },
       { name: 'resourceName', label: '자원명', required: true },
       { name: 'resourceDescription', label: '설명' },
       { name: 'capacity', label: '수용/탑승 인원' },
@@ -101,7 +101,8 @@ export const formScreens = {
       { name: 'content', label: '업무 내용', required: true },
       { name: 'assigneeId', label: '담당자', required: true },
       { name: 'dueDate', label: '마감일', required: true },
-      { name: 'taskStatus', label: '상태' },
+      { name: 'taskStatus', label: '상태', commonCodeGroup: 'TASK_STATUS' },
+      { name: 'priority', label: '우선순위', commonCodeGroup: 'TASK_PRIORITY' },
     ],
     upload: ['첨부파일', '파일 추가', 'PDF·Office·이미지·ZIP, 파일당 최대 10MB'],
   },
@@ -118,7 +119,7 @@ export const formScreens = {
   scheduleRegister: {
     width: 'medium',
     fields: [
-      { name: 'scheduleType', label: '일정 유형', required: true },
+      { name: 'scheduleType', label: '일정 유형', required: true, commonCodeGroup: 'SCHEDULE_TYPE' },
       { name: 'title', label: '제목', required: true },
       { name: 'content', label: '내용' },
       { name: 'location', label: '장소' },
@@ -147,5 +148,6 @@ export const formScreens = {
       { name: 'description', label: '설명' },
       { name: 'useYn', label: '사용여부' },
     ],
+    detailEditor: true,
   },
 };

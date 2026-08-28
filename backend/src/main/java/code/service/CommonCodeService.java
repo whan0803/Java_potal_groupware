@@ -3,6 +3,8 @@ package code.service;
 
 import code.dto.*;
 import code.entity.CommonCode;
+import code.entity.CommonCodeDetail;
+import code.repository.CommonCodeDetailRepository;
 import code.repository.CommonCodeRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class CommonCodeService {
 
 
     private final CommonCodeRepository repository;
+    private final CommonCodeDetailRepository detailRepository;
 
 
 
@@ -31,11 +34,12 @@ public class CommonCodeService {
 
 
         return repository.findAll()
-
                 .stream()
-
-                .map(CommonCodeResponse::from)
-
+                .map(code -> CommonCodeResponse.from(
+                        code,
+                        detailRepository.countByCodeGroupId(code.getCodeGroupId()),
+                        getDetails(code.getCodeGroupId(), false)
+                ))
                 .toList();
 
     }
@@ -86,6 +90,8 @@ public class CommonCodeService {
 
         repository.save(code);
 
+        saveDetails(code, request.details(), request.createdBy());
+
     }
 
 
@@ -132,6 +138,71 @@ public class CommonCodeService {
 
         );
 
+        detailRepository.deleteByCodeGroupId(codeGroupId);
+        detailRepository.flush();
+        saveDetails(code, request.details(), request.updatedBy());
+
+    }
+
+
+    @Transactional
+    public void delete(String codeGroupId) {
+        CommonCode code =
+                repository.findById(codeGroupId)
+                        .orElseThrow(
+                                () -> new IllegalArgumentException(
+                                        "코드 그룹을 찾을 수 없습니다."
+                                )
+                        );
+
+        detailRepository.deleteByCodeGroupId(codeGroupId);
+        detailRepository.flush();
+        repository.delete(code);
+    }
+
+
+    public List<CommonCodeDetailResponse> getDetails(String codeGroupId, boolean activeOnly) {
+        List<CommonCodeDetail> details = activeOnly
+                ? detailRepository.findByCodeGroupIdAndUseYnOrderBySortOrderAscCodeValueAsc(codeGroupId, "Y")
+                : detailRepository.findByCodeGroupIdOrderBySortOrderAscCodeValueAsc(codeGroupId);
+
+        return details.stream()
+                .map(CommonCodeDetailResponse::from)
+                .toList();
+    }
+
+
+    private void saveDetails(
+            CommonCode code,
+            List<CommonCodeDetailRequest> requests,
+            Long userId
+    ) {
+        if (requests == null || requests.isEmpty()) {
+            return;
+        }
+
+        List<CommonCodeDetail> details = requests.stream()
+                .filter(request -> request.codeValue() != null && !request.codeValue().isBlank())
+                .filter(request -> request.codeName() != null && !request.codeName().isBlank())
+                .map(request -> CommonCodeDetail.create(
+                        code,
+                        request.codeValue().trim().toUpperCase(),
+                        request.codeName().trim(),
+                        request.sortOrder() == null ? 0 : request.sortOrder(),
+                        normalizeUseYn(request.useYn()),
+                        userId
+                ))
+                .toList();
+
+        detailRepository.saveAll(details);
+    }
+
+
+    private String normalizeUseYn(String useYn) {
+        if (useYn == null || useYn.isBlank()) {
+            return "Y";
+        }
+        return "N".equalsIgnoreCase(useYn.trim()) ? "N" : "Y";
     }
 
 }

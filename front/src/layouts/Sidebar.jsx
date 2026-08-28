@@ -6,14 +6,34 @@ import { navGroups } from '../data/navigation.js';
 function Sidebar() {
   const { pathname } = useLocation();
   const { user, logout } = useApp();
-  const [openGroup, setOpenGroup] = useState(() => getActiveGroup(pathname));
+  const [openGroups, setOpenGroups] = useState(() => {
+    const activeGroup = getActiveGroup(pathname);
+    return activeGroup ? new Set([activeGroup]) : new Set();
+  });
 
   useEffect(() => {
-    setOpenGroup(getActiveGroup(pathname));
+    const activeGroup = getActiveGroup(pathname);
+    if (!activeGroup) return;
+
+    setOpenGroups((current) => {
+      const next = new Set(current);
+      next.add(activeGroup);
+      return next;
+    });
   }, [pathname]);
 
   const toggleGroup = (label) => {
-    setOpenGroup((current) => (current === label ? '' : label));
+    setOpenGroups((current) => {
+      const next = new Set(current);
+
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+
+      return next;
+    });
   };
 
   return (
@@ -35,14 +55,14 @@ function Sidebar() {
               <button
                 className={`nav-parent nav-toggle ${isActiveGroup(group, pathname) ? 'active' : ''}`}
                 type="button"
-                aria-expanded={openGroup === group.label}
+                aria-expanded={openGroups.has(group.label)}
                 onClick={() => toggleGroup(group.label)}
               >
                 <span>{group.label}</span>
               </button>
             )}
             {group.children ? (
-              <div className={`nav-children ${openGroup === group.label ? 'open' : ''}`}>
+              <div className={`nav-children ${openGroups.has(group.label) ? 'open' : ''}`}>
                 {group.children.map(([label, path]) => (
                   <NavLink className={({ isActive }) => `nav-child ${isActive ? 'active' : ''}`} to={path} key={path}>
                     {label}
@@ -69,11 +89,15 @@ function Sidebar() {
 }
 
 function getActiveGroup(pathname) {
-  return navGroups.find((group) => group.children?.some(([, path]) => path === pathname))?.label ?? '';
+  return navGroups.find((group) => group.children?.some(([, path]) => isCurrentPath(pathname, path)))?.label ?? '';
 }
 
 function isActiveGroup(group, pathname) {
-  return group.children?.some(([, path]) => path === pathname);
+  return group.children?.some(([, path]) => isCurrentPath(pathname, path));
+}
+
+function isCurrentPath(pathname, path) {
+  return pathname === path || pathname.startsWith(`${path}/`);
 }
 
 export default Sidebar;

@@ -62,7 +62,7 @@ export const listScreens = {
   codes: {
     search: '코드 그룹명 검색',
     total: '총 0건',
-    columns: ['No', '코드 그룹 ID', '그룹명', '설명', '사용여부', '관리'],
+    columns: ['No', '코드 그룹 ID', '그룹명', '상세코드', '설명', '사용여부', '관리'],
     rows: [],
   },
   logs: {

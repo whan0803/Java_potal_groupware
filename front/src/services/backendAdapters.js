@@ -395,12 +395,13 @@ function mapCodes(items) {
       String(index + 1),
       item.codeGroupId,
       item.codeGroupName,
+      `${item.detailCount ?? item.details?.length ?? 0}개`,
       item.description ?? '',
       ynLabel(item.useYn),
       '상세',
     ], item),
   );
-  return withRows('코드 그룹명 검색', ['No', '코드 그룹 ID', '그룹명', '설명', '사용여부', '관리'], rows);
+  return withRows('코드 그룹명 검색', ['No', '코드 그룹 ID', '그룹명', '상세코드', '설명', '사용여부', '관리'], rows);
 }
 
 function mapAuditLogs(response) {
@@ -534,7 +535,7 @@ export async function saveFormToBackend(formKey, values, context) {
       return meta.reservationId ? api.put(`/api/reservations/${meta.reservationId}`, body) : api.post('/api/reservations', body);
     },
     resourceRegister: () => api.post('/api/reservations/resources', {
-      resourceType: values.resourceType === '차량' ? 'VEHICLE' : 'MEETING_ROOM',
+      resourceType: values.resourceType === '차량' ? 'VEHICLE' : values.resourceType || 'MEETING_ROOM',
       resourceName: values.resourceName,
       resourceDescription: values.resourceDescription || '',
       capacity: Number(values.capacity) || null,
@@ -591,6 +592,7 @@ export async function saveFormToBackend(formKey, values, context) {
         useYn: ynValue(values.useYn),
         createdBy: userId,
         updatedBy: userId,
+        details: normalizeCodeDetails(values.details, userId),
       };
       return meta.codeGroupId ? api.put(`/api/common-codes/${meta.codeGroupId}`, body) : api.post('/api/common-codes', body);
     },
@@ -603,6 +605,17 @@ export async function saveFormToBackend(formKey, values, context) {
     await uploadFiles(formKey, referenceId, files, userId);
   }
   return result;
+}
+
+function normalizeCodeDetails(details = []) {
+  return details
+    .map((detail, index) => ({
+      codeValue: String(detail.codeValue ?? '').trim().toUpperCase(),
+      codeName: String(detail.codeName ?? '').trim(),
+      sortOrder: Number(detail.sortOrder) || index + 1,
+      useYn: ynValue(detail.useYn),
+    }))
+    .filter((detail) => detail.codeValue && detail.codeName);
 }
 
 function getReferenceId(formKey, meta, result) {
@@ -636,6 +649,7 @@ export async function deleteBackendRow(listKey, row, user) {
     reservations: () => api.patch(`/api/reservations/${meta.reservationId}/cancel`),
     templates: () => api.delete(`/api/document-templates/${meta.templateId}`),
     tasks: () => api.delete(`/api/tasks/${meta.taskId}`),
+    codes: () => api.delete(`/api/common-codes/${meta.codeGroupId}`),
   };
   return handlers[listKey]?.();
 }

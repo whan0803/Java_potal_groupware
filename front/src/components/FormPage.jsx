@@ -16,6 +16,7 @@ const selectOptions = {
   allDayYn: ['아니오', '예'],
 };
 
+const emptyCodeDetail = { codeValue: '', codeName: '', sortOrder: '', useYn: '사용' };
 const dateFields = new Set(['startDate', 'endDate', 'reservationDate', 'dueDate']);
 const timeFields = new Set(['startTime', 'endTime']);
 const getToday = () => {
@@ -88,6 +89,7 @@ function FormPage({ formKey, config }) {
   const [values, setValues] = useState(initialValues);
   const [selectedChip, setSelectedChip] = useState(editingRow?.[1] ?? config.chips?.[0] ?? '');
   const dynamicOptions = useMemo(() => getDynamicOptions(formKey, lists, resources, selectedChip), [formKey, lists, resources, selectedChip]);
+  const commonCodeOptions = useMemo(() => getCommonCodeOptions(lists), [lists]);
   const [selectedRoles, setSelectedRoles] = useState(initialRoles);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [files, setFiles] = useState([]);
@@ -219,6 +221,7 @@ function FormPage({ formKey, config }) {
               onRoleSelect={() => setIsRoleModalOpen(true)}
               selectedRoles={selectedRoles}
               dynamicOptions={dynamicOptions}
+              commonCodeOptions={commonCodeOptions}
               key={section.title}
             />
           ))
@@ -230,8 +233,10 @@ function FormPage({ formKey, config }) {
           values={values}
           onChange={handleChange}
           dynamicOptions={dynamicOptions}
+          commonCodeOptions={commonCodeOptions}
         />
       ) : null}
+      {config.detailEditor ? <CommonCodeDetailEditor details={values.details ?? [emptyCodeDetail]} onChange={(details) => handleChange('details', details)} /> : null}
       {config.help ? <p className="form-help">{config.help}</p> : null}
       {config.upload ? <UploadBox upload={config.upload} files={files} onFilesChange={setFiles} /> : null}
       {error ? <p className="form-error">{error}</p> : null}
@@ -328,7 +333,8 @@ function rowToValues(formKey, row) {
       content: row._meta?.content ?? '',
       assigneeId: row[2],
       dueDate: row[4],
-      taskStatus: row[5],
+      taskStatus: row._meta?.taskStatus ?? row[5],
+      priority: row._meta?.priority ?? '',
     }),
     templateRegister: () => ({
       templateCode: row[1],
@@ -339,8 +345,9 @@ function rowToValues(formKey, row) {
     codeRegister: () => ({
       codeGroupId: row[1],
       codeGroupName: row[2],
-      description: row[3],
-      useYn: row[4],
+      description: row[4],
+      useYn: row[5],
+      details: normalizeCodeDetailsForForm(row._meta?.details),
     }),
   };
 
@@ -444,6 +451,16 @@ function validateForm(config, values, lists, options = {}) {
   if (values.codeGroupId && lists.codes.rows.some((row) => row !== options.editingRow && row[1] === values.codeGroupId)) {
     return { ok: false, message: '이미 사용 중인 코드 그룹 ID입니다.' };
   }
+  if (options.formKey === 'codeRegister') {
+    const details = (values.details ?? []).filter((detail) => String(detail.codeValue ?? '').trim() || String(detail.codeName ?? '').trim());
+    const incomplete = details.find((detail) => !String(detail.codeValue ?? '').trim() || !String(detail.codeName ?? '').trim());
+    if (incomplete) return { ok: false, message: '상세 코드는 코드값과 표시명을 함께 입력해야 합니다.' };
+
+    const codeValues = details.map((detail) => String(detail.codeValue).trim().toUpperCase());
+    if (new Set(codeValues).size !== codeValues.length) {
+      return { ok: false, message: '상세 코드값이 중복되었습니다.' };
+    }
+  }
 
   return { ok: true };
 }
@@ -467,11 +484,38 @@ function getDynamicOptions(formKey, lists, resources, selectedChip) {
   };
 }
 
-function FormSection({ section, values, onChange, onRoleSelect, selectedRoles = [], dynamicOptions = {} }) {
+function getCommonCodeOptions(lists) {
+  const rows = lists.codes?.rows ?? [];
+  return rows.reduce((options, row) => {
+    const meta = row._meta;
+    if (!meta?.codeGroupId || meta.useYn === 'N') return options;
+
+    return {
+      ...options,
+      [meta.codeGroupId]: (meta.details ?? [])
+        .filter((detail) => detail.useYn !== 'N')
+        .sort((first, second) => (first.sortOrder ?? 0) - (second.sortOrder ?? 0))
+        .map((detail) => ({ value: detail.codeValue, label: detail.codeName })),
+    };
+  }, {});
+}
+
+function normalizeCodeDetailsForForm(details = []) {
+  const normalized = details.map((detail, index) => ({
+    codeValue: detail.codeValue ?? '',
+    codeName: detail.codeName ?? '',
+    sortOrder: String(detail.sortOrder ?? index + 1),
+    useYn: detail.useYn === 'N' ? '미사용' : '사용',
+  }));
+
+  return normalized.length ? normalized : [emptyCodeDetail];
+}
+
+function FormSection({ section, values, onChange, onRoleSelect, selectedRoles = [], dynamicOptions = {}, commonCodeOptions = {} }) {
   return (
     <section className="form-section">
       <h2>{section.title}</h2>
-      {section.fields ? <FieldGrid fields={section.fields} values={values} onChange={onChange} dynamicOptions={dynamicOptions} /> : null}
+      {section.fields ? <FieldGrid fields={section.fields} values={values} onChange={onChange} dynamicOptions={dynamicOptions} commonCodeOptions={commonCodeOptions} /> : null}
       {section.empty ? (
         <div className="empty-strip">
           {selectedRoles.length ? (
@@ -494,13 +538,15 @@ function FormSection({ section, values, onChange, onRoleSelect, selectedRoles = 
   );
 }
 
-function FieldGrid({ fields, placeholders = {}, values, onChange, dynamicOptions = {} }) {
+function FieldGrid({ fields, placeholders = {}, values, onChange, dynamicOptions = {}, commonCodeOptions = {} }) {
   return (
     <div className="field-grid">
       {fields.map((field) => {
-        const { name, label, required = false } = normalizeField(field);
+        const { name, label, required = false, commonCodeGroup } = normalizeField(field);
         const large = ['내용', '업무 내용', '사용 목적'].includes(label);
-        const options = dynamicOptions[name] ?? selectOptions[name];
+        const options = commonCodeOptions[commonCodeGroup]?.length
+          ? commonCodeOptions[commonCodeGroup]
+          : dynamicOptions[name] ?? selectOptions[name];
 
         return (
           <label className={large ? 'field large' : 'field'} key={name}>
@@ -536,6 +582,67 @@ function FieldGrid({ fields, placeholders = {}, values, onChange, dynamicOptions
         );
       })}
     </div>
+  );
+}
+
+function CommonCodeDetailEditor({ details, onChange }) {
+  const rows = details.length ? details : [emptyCodeDetail];
+  const updateDetail = (index, name, value) => {
+    onChange(rows.map((detail, detailIndex) => (detailIndex === index ? { ...detail, [name]: value } : detail)));
+  };
+  const addDetail = () => {
+    onChange([...rows, { ...emptyCodeDetail, sortOrder: String(rows.length + 1) }]);
+  };
+  const removeDetail = (index) => {
+    const nextRows = rows.filter((_, detailIndex) => detailIndex !== index);
+    onChange(nextRows.length ? nextRows : [emptyCodeDetail]);
+  };
+
+  return (
+    <section className="form-section code-detail-editor">
+      <div className="section-title-row">
+        <h2>상세 코드</h2>
+        <button className="button secondary" type="button" onClick={addDetail}>
+          행 추가
+        </button>
+      </div>
+      <div className="code-detail-table">
+        <div className="code-detail-head">
+          <span>코드값</span>
+          <span>표시명</span>
+          <span>순서</span>
+          <span>사용</span>
+          <span>삭제</span>
+        </div>
+        {rows.map((detail, index) => (
+          <div className="code-detail-row" key={index}>
+            <input
+              value={detail.codeValue ?? ''}
+              placeholder="READY"
+              onChange={(event) => updateDetail(index, 'codeValue', event.target.value)}
+            />
+            <input
+              value={detail.codeName ?? ''}
+              placeholder="예정"
+              onChange={(event) => updateDetail(index, 'codeName', event.target.value)}
+            />
+            <input
+              value={detail.sortOrder ?? ''}
+              inputMode="numeric"
+              placeholder={String(index + 1)}
+              onChange={(event) => updateDetail(index, 'sortOrder', event.target.value)}
+            />
+            <select value={detail.useYn ?? '사용'} onChange={(event) => updateDetail(index, 'useYn', event.target.value)}>
+              <option value="사용">사용</option>
+              <option value="미사용">미사용</option>
+            </select>
+            <button className="button secondary" type="button" onClick={() => removeDetail(index)}>
+              삭제
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

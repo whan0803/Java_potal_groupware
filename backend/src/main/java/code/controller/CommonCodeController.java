@@ -38,6 +38,19 @@ public class CommonCodeController {
     }
 
 
+    @GetMapping("/{codeGroupId}/details")
+    public ResponseEntity<List<CommonCodeDetailResponse>> getDetails(
+            @PathVariable String codeGroupId,
+            @RequestParam(defaultValue = "true") boolean activeOnly
+    ){
+
+        return ResponseEntity.ok(
+                service.getDetails(codeGroupId, activeOnly)
+        );
+
+    }
+
+
 
 
 
@@ -86,6 +99,18 @@ public class CommonCodeController {
 
 
         return ResponseEntity.ok().build();
+
+    }
+
+
+    @DeleteMapping("/{codeGroupId}")
+    public ResponseEntity<Void> delete(
+            @PathVariable String codeGroupId
+    ){
+
+        service.delete(codeGroupId);
+
+        return ResponseEntity.noContent().build();
 
     }
 
