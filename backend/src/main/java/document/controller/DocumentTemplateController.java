@@ -164,17 +164,37 @@ public class DocumentTemplateController {
 
 
 
-    // 삭제
+    // 비활성화
 
-    @DeleteMapping("/{templateId}")
-    public ResponseEntity<Void> delete(
+    @PatchMapping("/{templateId}/deactivate")
+    public ResponseEntity<Void> deactivate(
 
             @PathVariable Long templateId,
             @RequestParam(required = false) Long userId
 
     ){
 
-        service.delete(templateId, userId);
+        service.deactivate(templateId, userId);
+
+
+        return ResponseEntity.ok().build();
+
+    }
+
+
+
+
+
+    // 삭제
+
+    @DeleteMapping("/{templateId}")
+    public ResponseEntity<Void> delete(
+
+            @PathVariable Long templateId
+
+    ){
+
+        service.delete(templateId);
 
 
         return ResponseEntity.ok().build();

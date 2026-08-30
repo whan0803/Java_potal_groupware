@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -111,7 +112,7 @@ class DocumentFileApiTest {
                 .andExpect(jsonPath("$.templateName").value("codex_doc_template_name_updated"))
                 .andExpect(jsonPath("$.templateContent").value("updated content"));
 
-        mockMvc.perform(delete("/api/document-templates/{templateId}", templateId)
+        mockMvc.perform(patch("/api/document-templates/{templateId}/deactivate", templateId)
                         .session(session)
                         .param("userId", userId.toString()))
                 .andExpect(status().isOk());
@@ -120,6 +121,23 @@ class DocumentFileApiTest {
                         .session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.useYn").value("N"));
+
+        Long deleteTargetId = createTemplate(
+                session,
+                "codex_doc_template_delete",
+                "codex_doc_template_delete_name",
+                "codex document template delete content",
+                "Y"
+        );
+
+        mockMvc.perform(delete("/api/document-templates/{templateId}", deleteTargetId)
+                        .session(session))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/document-templates/{templateId}", deleteTargetId)
+                        .session(session))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("문서양식을 찾을 수 없습니다."));
     }
 
     @Test

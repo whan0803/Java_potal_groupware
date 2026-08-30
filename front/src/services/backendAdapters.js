@@ -648,7 +648,7 @@ export async function deleteBackendRow(listKey, row, user) {
     boards: () => api.patch(`/api/boards/${meta.boardId}/disable`, { userId }),
     posts: () => api.patch(`/api/posts/${meta.postId}/delete`, { userId, admin: isAdminUser(user) }),
     reservations: () => api.patch(`/api/reservations/${meta.reservationId}/cancel`),
-    templates: () => api.delete(`/api/document-templates/${meta.templateId}?userId=${userId}`),
+    templates: () => api.delete(`/api/document-templates/${meta.templateId}`),
     tasks: () => api.delete(`/api/tasks/${meta.taskId}`),
     codes: () => api.delete(`/api/common-codes/${meta.codeGroupId}`),
   };
@@ -659,6 +659,7 @@ export async function updateBackendStatus(listKey, row, status, user) {
   const meta = row?._meta ?? {};
   const userId = getCurrentUserId(user);
   if (listKey === 'tasks') return api.patch(`/api/tasks/${meta.taskId}/status`, { taskStatus: statusValue(status) });
+  if (listKey === 'templates' && status === '미사용') return api.patch(`/api/document-templates/${meta.templateId}/deactivate?userId=${userId}`);
   if (listKey === 'approval' && status === '완료') return api.patch(`/api/approvals/${meta.approvalDocumentId ?? meta.approvalId}/approve`, { approverId: userId, comment: '' });
   if (listKey === 'reservations' && ['승인', '반려'].includes(status)) {
     return api.patch(`/api/reservations/${meta.reservationId}/${status === '승인' ? 'approve' : 'reject'}`, {

@@ -89,6 +89,20 @@ function filterRowsByTab(config, activeTab) {
 }
 
 async function handleTableAction({ listKey, action, row, rowIndex, user, navigate, updateRowStatus, removeRow, refreshBackendState }) {
+  if (listKey === 'templates' && action === '비활성화') {
+    if (!window.confirm('이 문서양식을 비활성화하시겠습니까?')) return;
+    await updateRowStatus('templates', rowIndex, '미사용');
+    window.alert('문서양식이 비활성화되었습니다.');
+    return;
+  }
+
+  if (listKey === 'templates' && action === '삭제') {
+    if (!window.confirm('이 문서양식을 완전히 삭제하시겠습니까? 사용 중인 양식은 삭제할 수 없습니다.')) return;
+    await removeRow(listKey, rowIndex);
+    window.alert('문서양식이 삭제되었습니다.');
+    return;
+  }
+
   if (action === '삭제') {
     await removeRow(listKey, rowIndex);
     return;
@@ -166,6 +180,11 @@ async function handleTableAction({ listKey, action, row, rowIndex, user, navigat
 
   if (listKey === 'templates' && action === '상세') {
     navigate(`/templates/detail?index=${rowIndex}`);
+    return;
+  }
+
+  if (listKey === 'templates' && action === '수정') {
+    navigate(`/templates/new?index=${rowIndex}`);
     return;
   }
 

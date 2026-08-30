@@ -6,6 +6,7 @@ import document.dto.DocumentTemplateUpdateRequest;
 import document.entity.DocumentTemplate;
 import document.repository.DocumentTemplateRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -177,10 +178,10 @@ public class DocumentTemplateService {
 
 
 
-    // 삭제
+    // 비활성화
 
     @Transactional
-    public void delete(
+    public void deactivate(
             Long templateId,
             Long updatedBy
     ){
@@ -189,6 +190,27 @@ public class DocumentTemplateService {
                 findTemplate(templateId);
 
         template.delete(updatedBy);
+
+    }
+
+    // 삭제
+
+    @Transactional
+    public void delete(
+            Long templateId
+    ){
+
+        DocumentTemplate template =
+                findTemplate(templateId);
+
+        try {
+            repository.delete(template);
+            repository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalStateException(
+                    "사용 중인 문서양식은 삭제할 수 없습니다. 비활성화로 처리해 주세요."
+            );
+        }
 
     }
 

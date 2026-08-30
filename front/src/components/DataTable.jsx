@@ -99,6 +99,34 @@ function renderCell(cell, options = {}) {
     return <span className="muted-cell">{cell === '결재 처리' ? '처리 권한 없음' : '처리 완료'}</span>;
   }
 
+  if (options.isTemplateAction) {
+    const isDisabled = options.row?.[4] === '미사용';
+    return (
+      <span className="role-action-group">
+        <button className="table-action" type="button" onClick={() => options.onAction('상세')}>
+          상세
+        </button>
+        {options.canUpdate ? (
+          <>
+            <button className="table-action" type="button" onClick={() => options.onAction('수정')}>
+              수정
+            </button>
+            {!isDisabled ? (
+              <button className="table-action" type="button" onClick={() => options.onAction('비활성화')}>
+                비활성화
+              </button>
+            ) : null}
+          </>
+        ) : null}
+        {options.canDelete ? (
+          <button className="table-action danger" type="button" onClick={() => options.onAction('삭제')}>
+            삭제
+          </button>
+        ) : null}
+      </span>
+    );
+  }
+
   if (options.isRoleAction) {
     return (
       <span className="role-action-group">
@@ -180,8 +208,10 @@ function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDele
                     isReservationAction: listKey === 'reservations' && cellIndex === actionColumnIndex,
                     isReservationApprovalAction: listKey === 'reservationApproval' && cellIndex === actionColumnIndex,
                     isApprovalAction: listKey === 'approval' && cellIndex === actionColumnIndex,
+                    isTemplateAction: listKey === 'templates' && cellIndex === actionColumnIndex,
                     isRoleAction: listKey === 'roles' && cellIndex === actionColumnIndex,
                     isAction: cellIndex === actionColumnIndex,
+                    row,
                     canUpdate: canUpdate && (canEditRow?.(row) ?? true),
                     canDelete: canDelete && (canEditRow?.(row) ?? true) && canDeleteRow(listKey, cell),
                     onAction: (actionValue = cell) => onAction?.(row, actionValue),
