@@ -87,22 +87,6 @@ export function AppProvider({ children }) {
   const [permissions, setPermissions] = useState([]);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
-  useEffect(() => {
-    window.localStorage.removeItem('groupware-admin:user');
-    window.localStorage.removeItem('groupware-admin:accounts');
-    window.localStorage.removeItem('groupware-admin:lists');
-    window.localStorage.removeItem('groupware-admin:messages');
-    window.localStorage.removeItem('groupware-admin:sentMessages');
-    window.localStorage.removeItem('groupware-admin:roleMenus');
-  }, []);
-
-  useEffect(() => saveStorage('accounts', accounts), [accounts]);
-  useEffect(() => saveStorage('lists', lists), [lists]);
-  useEffect(() => saveStorage('schedules', schedules), [schedules]);
-  useEffect(() => saveStorage('messages', messages), [messages]);
-  useEffect(() => saveStorage('sentMessages', sentMessages), [sentMessages]);
-  useEffect(() => saveStorage('roleMenus', roleMenus), [roleMenus]);
-  useEffect(() => saveStorage('resources', resources), [resources]);
 
   const writeAuditLog = async (tableName, actionType, detail, auditData = {}) => {
     const beforeData = auditData.beforeData === undefined ? null : toAuditData(auditData.beforeData);
@@ -152,6 +136,7 @@ export function AppProvider({ children }) {
     setPermissionsLoaded(false);
   };
 
+  //dashboard 데이터 가져오기
   const refreshBackendState = async () => {
     if (!user) return;
     setApiStatus((current) => ({ ...current, loading: true, error: '' }));

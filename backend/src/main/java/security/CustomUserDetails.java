@@ -16,6 +16,7 @@ public class CustomUserDetails implements UserDetails {
 
     private final Collection<? extends GrantedAuthority> authorities;
 
+    //CustomUserDetailsService가 DB에서 loginId로 사용자 조회
     public CustomUserDetails(
             User user,
             Collection<? extends GrantedAuthority> authorities

@@ -5,7 +5,12 @@ import { useAuth } from '../context/AppContext.jsx';
 function Login() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const [values, setValues] = useState({ id: '', password: '' });
+  const [values, setValues] = useState(
+    {
+      id: '', 
+      password: '' 
+    }
+  );
   const [error, setError] = useState('');
 
   if (user) return <Navigate to="/" replace />;

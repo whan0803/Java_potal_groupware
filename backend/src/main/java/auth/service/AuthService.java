@@ -40,12 +40,13 @@ public class AuthService {
         String loginId = request.loginId().trim();
 
         try{
+            //service가 UsernamePasswordAuthenticationToken 생성
             UsernamePasswordAuthenticationToken authenticationToken =
                     UsernamePasswordAuthenticationToken.unauthenticated(
                             loginId,
                             request.password()
                     );
-
+            //AuthenticationManager.authenticate()로 인증 위임
             Authentication authentication =
                     authenticationManager.authenticate(
                             authenticationToken
