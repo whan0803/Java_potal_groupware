@@ -22,7 +22,7 @@ public class MenuService {
     private final MenuRepository menuRepository;
     private final RoleMenuRepository roleMenuRepository;
 
-    // MENU-001 메뉴 목록 조회
+    // 메뉴 목록 조회
     public List<MenuResponse> getMenus() {
         return menuRepository
                 .findByParentMenuIsNullOrderBySortOrderAsc()
@@ -31,7 +31,7 @@ public class MenuService {
                 .toList();
     }
 
-    // MENU-002 메뉴 등록
+    //메뉴 등록
     @Transactional
     public Long createMenu(MenuCreateRequest request) {
         validateDuplicateMenu(
@@ -58,7 +58,7 @@ public class MenuService {
         return savedMenu.getMenuId();
     }
 
-    // MENU-003 메뉴 수정
+    //메뉴 수정
     @Transactional
     public void updateMenu(
             Long menuId,
@@ -87,7 +87,7 @@ public class MenuService {
         );
     }
 
-    // MENU-004 메뉴 순서 변경
+    // 메뉴 순서 변경
     @Transactional
     public void changeMenuOrder(MenuOrderRequest request) {
 
@@ -109,7 +109,7 @@ public class MenuService {
         }
     }
 
-    // MENU-005 메뉴 사용 중지
+    // 메뉴 사용 중지
     @Transactional
     public void disableMenu(
             Long menuId,

@@ -73,7 +73,7 @@ public class NoticeService {
         return NoticeDetailResponse.from(notice);
     }
 
-    // NOTICE-004 공지사항 등록
+    //공지사항 등록
     @Transactional
     public Long createNotice(NoticeCreateRequest request) {
 
@@ -101,7 +101,7 @@ public class NoticeService {
         return noticeRepository.save(notice).getNoticeId();
     }
 
-    // NOTICE-005 공지사항 수정
+    // 공지사항 수정
     @Transactional
     public void updateNotice(
             Long noticeId,
@@ -130,7 +130,7 @@ public class NoticeService {
         );
     }
 
-    // NOTICE-006 공지사항 논리 삭제
+    // 공지사항 논리 삭제
     @Transactional
     public void deleteNotice(
             Long noticeId,
@@ -146,7 +146,7 @@ public class NoticeService {
         notice.delete(request.userId());
     }
 
-    // NOTICE-007 중요 공지 설정
+    //중요 공지 설정
     @Transactional
     public void changeImportant(
             Long noticeId,
