@@ -35,7 +35,7 @@ export const formScreens = {
   menuEdit: {
     width: 'narrow',
     fields: [
-      { name: 'parentMenuName', label: '상위 메뉴' },
+      { name: 'parentMenuId', label: '상위 메뉴', emptyLabel: '없음 (최상위 메뉴)' },
       { name: 'menuName', label: '메뉴명', required: true },
       { name: 'menuUrl', label: 'URL' },
       { name: 'sortOrder', label: '정렬 순서' },

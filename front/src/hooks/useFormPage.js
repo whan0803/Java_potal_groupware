@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
+import { navGroups } from '../data/navigation.js';
 import { api } from '../services/api.js';
 import { buildRow, formTargets } from '../utils/formActions.js';
 import { canUsePermission } from '../utils/permissions.js';
@@ -82,7 +83,10 @@ export function useFormPage(formKey, config) {
   );
   const [values, setValues] = useState(initialValues);
   const [selectedChip, setSelectedChip] = useState(editingRow?.[1] ?? config.chips?.[0] ?? '');
-  const dynamicOptions = useMemo(() => getDynamicOptions(lists, resources, selectedChip), [lists, resources, selectedChip]);
+  const dynamicOptions = useMemo(
+    () => getDynamicOptions(lists, resources, selectedChip, editingRow),
+    [lists, resources, selectedChip, editingRow],
+  );
   const commonCodeOptions = useMemo(() => getCommonCodeOptions(lists), [lists]);
   const [selectedRoles, setSelectedRoles] = useState(initialRoles);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -248,6 +252,7 @@ function rowToValues(formKey, row) {
       useYn: row[5],
     }),
     menuEdit: () => ({
+      parentMenuId: row._meta?.parentMenuId ? String(row._meta.parentMenuId) : '',
       menuName: row[0],
       menuUrl: row[1],
       sortOrder: row[2],
@@ -419,7 +424,7 @@ function validateForm(config, values, lists, options = {}) {
   return { ok: true };
 }
 
-function getDynamicOptions(lists, resources, selectedChip) {
+function getDynamicOptions(lists, resources, selectedChip, editingRow = null) {
   const boardOptions = lists.boards.rows
     .filter((row) => row[4] !== '미사용')
     .map((row) => ({ value: String(row._meta?.boardId ?? row[1]), label: row[1] }));
@@ -430,11 +435,50 @@ function getDynamicOptions(lists, resources, selectedChip) {
     .filter((resource) => resource.resourceType === (selectedChip === '차량' ? 'VEHICLE' : 'MEETING_ROOM'))
     .map((resource) => ({ value: resource.resourceName, label: resource.resourceName }))
     .filter((option, index, options) => option.value && options.findIndex((item) => item.value === option.value) === index);
+  const currentMenuId = editingRow?._meta?.menuId;
+  const menuRowsById = new Map(
+    lists.menus.rows
+      .filter((row) => row._meta?.menuId)
+      .map((row) => [String(row._meta.menuId), row]),
+  );
+  const isDescendantMenu = (row) => {
+    let parentMenuId = row._meta?.parentMenuId;
+
+    while (parentMenuId) {
+      if (String(parentMenuId) === String(currentMenuId)) return true;
+      parentMenuId = menuRowsById.get(String(parentMenuId))?._meta?.parentMenuId;
+    }
+
+    return false;
+  };
+  const sidebarParentOptions = navGroups
+    .map((group) => {
+      const existingMenu = lists.menus.rows.find((row) => row[0] === group.label && row._meta?.menuId);
+      return {
+        existingMenu,
+        value: existingMenu?._meta?.menuId ? String(existingMenu._meta.menuId) : `sidebar:${group.label}`,
+        label: group.label,
+      };
+    })
+    .filter(({ existingMenu }) => !existingMenu || String(existingMenu._meta.menuId) !== String(currentMenuId))
+    .filter(({ existingMenu }) => !currentMenuId || !existingMenu || !isDescendantMenu(existingMenu))
+    .map(({ value, label }) => ({ value, label }));
+  const registeredMenuOptions = lists.menus.rows
+    .filter((row) => row._meta?.menuId)
+    .filter((row) => row[4] !== '미사용')
+    .filter((row) => !navGroups.some((group) => group.label === row[0]))
+    .filter((row) => String(row._meta.menuId) !== String(currentMenuId))
+    .filter((row) => !currentMenuId || !isDescendantMenu(row))
+    .map((row) => ({
+      value: String(row._meta.menuId),
+      label: `${'- '.repeat(Math.max((row._meta.menuLevel ?? 1) - 1, 0))}${row[0]}`,
+    }));
   return {
     boardId: boardOptions,
     receiveId: userOptions,
     assigneeId: userOptions,
     resourceName: resourceOptions,
+    parentMenuId: [...sidebarParentOptions, ...registeredMenuOptions],
   };
 }
 

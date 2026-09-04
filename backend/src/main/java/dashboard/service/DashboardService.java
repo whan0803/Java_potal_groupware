@@ -283,7 +283,7 @@ public class DashboardService {
                 )
                 .toList();
     }
-
+    //최근 변경 이력 목록을 여러 테이블 조합해서 빠르게 가져오는 조회 전용 기능
     private List<ChangeHistoryDashboardResponse> getRecentChanges(
             PageRequest listLimit
     ) {

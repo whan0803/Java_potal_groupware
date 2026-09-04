@@ -1,4 +1,5 @@
 import { api, attachmentApi, getPageItems, listApi } from './api.js';
+import { navGroups } from '../data/navigation.js';
 
 const formatDate = (value) => String(value ?? '').slice(0, 10);
 const formatTime = (value) => String(value ?? '').slice(11, 16);
@@ -111,6 +112,8 @@ const flattenMenus = (menus, rows = []) => {
   });
   return rows;
 };
+
+const SIDEBAR_PARENT_PREFIX = 'sidebar:';
 
 export function getCurrentUserId(user, fallback = 1) {
   return Number(user?.userId ?? user?.user_id ?? user?.id) || fallback;
@@ -479,11 +482,12 @@ export async function saveFormToBackend(formKey, values, context) {
       };
       return meta.roleId ? api.put(`/api/roles/${meta.roleId}`, body) : api.post('/api/roles', body);
     },
-    menuEdit: () => {
+    menuEdit: async () => {
+      const parentMenuId = await resolveMenuParentId(values.parentMenuId, lists, userId);
       const body = {
         menuName: values.menuName,
         menuUrl: values.menuUrl || null,
-        parentMenuId: null,
+        parentMenuId,
         sortOrder: Number(values.sortOrder) || 0,
         useYn: ynValue(values.useYn),
         userId,
@@ -606,6 +610,43 @@ export async function saveFormToBackend(formKey, values, context) {
     await uploadFiles(formKey, referenceId, files, userId);
   }
   return result;
+}
+
+async function resolveMenuParentId(parentMenuId, lists, userId) {
+  if (!parentMenuId) return null;
+
+  const numericParentMenuId = Number(parentMenuId);
+  if (Number.isInteger(numericParentMenuId)) return numericParentMenuId;
+
+  if (!String(parentMenuId).startsWith(SIDEBAR_PARENT_PREFIX)) return null;
+
+  const parentMenuName = String(parentMenuId).slice(SIDEBAR_PARENT_PREFIX.length);
+  const existingRow = lists.menus.rows.find((row) => row[0] === parentMenuName && row._meta?.menuId);
+  if (existingRow?._meta?.menuId) return Number(existingRow._meta.menuId);
+
+  const sidebarIndex = navGroups.findIndex((group) => group.label === parentMenuName);
+  const sidebarGroup = navGroups[sidebarIndex];
+  if (!sidebarGroup) return null;
+
+  try {
+    return await api.post('/api/menu', {
+      menuName: sidebarGroup.label,
+      menuUrl: sidebarGroup.path ?? null,
+      parentMenuId: null,
+      sortOrder: sidebarIndex + 1,
+      userId,
+    });
+  } catch (error) {
+    if (!String(error.message ?? '').includes('이미 사용 중인 메뉴명')) {
+      throw error;
+    }
+
+    const menus = flattenMenus(await listApi.menus());
+    const createdMenu = menus.find((menu) => menu.menuName === parentMenuName);
+    if (createdMenu?.menuId) return Number(createdMenu.menuId);
+
+    throw error;
+  }
 }
 
 function normalizeCodeDetails(details = []) {

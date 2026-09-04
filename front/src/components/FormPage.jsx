@@ -137,7 +137,7 @@ function FieldGrid({ fields, placeholders = {}, values, onChange, dynamicOptions
   return (
     <div className="field-grid">
       {fields.map((field) => {
-        const { name, label, required = false, commonCodeGroup } = normalizeField(field);
+        const { name, label, required = false, commonCodeGroup, emptyLabel = '선택' } = normalizeField(field);
         const large = ['내용', '업무 내용', '사용 목적'].includes(label);
         const options = commonCodeOptions[commonCodeGroup]?.length
           ? commonCodeOptions[commonCodeGroup]
@@ -157,7 +157,7 @@ function FieldGrid({ fields, placeholders = {}, values, onChange, dynamicOptions
                 value={values[name] ?? ''}
                 onChange={(event) => onChange(name, event.target.value)}
               >
-                <option value="">선택</option>
+                <option value="">{emptyLabel}</option>
                 {options.map((option) => (
                   <option value={typeof option === 'string' ? option : option.value} key={typeof option === 'string' ? option : option.value}>
                     {typeof option === 'string' ? option : option.label}
