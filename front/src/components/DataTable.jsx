@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+
 const statusValues = ['사용', '미사용', '승인', '대기', '반려', '진행중', '완료', '예정', '보류'];
 
 function renderCell(cell, options = {}) {
@@ -185,6 +187,19 @@ function renderCell(cell, options = {}) {
 }
 
 function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDelete = true, canEditRow }) {
+  if (listKey === 'menus') {
+    return (
+      <MenuTreeTable
+        columns={columns}
+        rows={rows}
+        onAction={onAction}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        canEditRow={canEditRow}
+      />
+    );
+  }
+
   const actionColumnIndex = columns.findIndex((column) => ['관리', '처리'].includes(column));
 
   return (
@@ -224,6 +239,110 @@ function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDele
       </table>
     </div>
   );
+}
+
+function MenuTreeTable({ columns, rows, onAction, canUpdate, canDelete, canEditRow }) {
+  const [expandedMenuIds, setExpandedMenuIds] = useState(() => new Set());
+  const actionColumnIndex = columns.findIndex((column) => column === '관리');
+  const { childrenByParentId, rootRows } = useMemo(() => buildMenuTree(rows), [rows]);
+  const visibleRows = useMemo(() => {
+    const result = [];
+
+    const appendRows = (menuRows, depth) => {
+      menuRows.forEach((row) => {
+        const menuId = String(row._meta?.menuId ?? '');
+        const children = childrenByParentId.get(menuId) ?? [];
+        result.push({ row, depth, hasChildren: children.length > 0 });
+        if (children.length && expandedMenuIds.has(menuId)) appendRows(children, depth + 1);
+      });
+    };
+
+    appendRows(rootRows, 0);
+    return result;
+  }, [childrenByParentId, expandedMenuIds, rootRows]);
+
+  const toggleMenu = (menuId) => {
+    setExpandedMenuIds((current) => {
+      const next = new Set(current);
+      if (next.has(menuId)) next.delete(menuId);
+      else next.add(menuId);
+      return next;
+    });
+  };
+
+  return (
+    <div className="table-wrap menu-tree-table">
+      <table>
+        <thead>
+          <tr>
+            {columns.map((column) => <th key={column}>{column}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.map(({ row, depth, hasChildren }) => {
+            const menuId = String(row._meta?.menuId ?? '');
+            const expanded = expandedMenuIds.has(menuId);
+
+            return (
+              <tr key={menuId || `${row[0]}-${depth}`} className={depth === 0 ? 'menu-parent-row' : 'menu-child-row'}>
+                {row.map((cell, cellIndex) => (
+                  <td key={`${cell}-${cellIndex}`}>
+                    {cellIndex === 0 ? (
+                      <span className="menu-tree-name" style={{ '--menu-depth': depth }}>
+                        {hasChildren ? (
+                          <button
+                            className={`menu-tree-toggle${expanded ? ' expanded' : ''}`}
+                            type="button"
+                            aria-label={`${cell} 하위 메뉴 ${expanded ? '접기' : '펼치기'}`}
+                            aria-expanded={expanded}
+                            onClick={() => toggleMenu(menuId)}
+                          >
+                            ›
+                          </button>
+                        ) : (
+                          <span className="menu-tree-spacer" aria-hidden="true" />
+                        )}
+                        <span>{cell}</span>
+                        {hasChildren ? <span className="menu-child-count">{childrenByParentId.get(menuId).length}</span> : null}
+                      </span>
+                    ) : renderCell(cell, {
+                      isAction: cellIndex === actionColumnIndex,
+                      row,
+                      canUpdate: canUpdate && (canEditRow?.(row) ?? true),
+                      canDelete: canDelete && (canEditRow?.(row) ?? true) && canDeleteRow('menus', cell),
+                      onAction: (actionValue = cell) => onAction?.(row, actionValue),
+                    })}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function buildMenuTree(rows) {
+  const rowIds = new Set(rows.map((row) => String(row._meta?.menuId ?? '')));
+  const childrenByParentId = new Map();
+  const rootRows = [];
+
+  rows.forEach((row) => {
+    const parentMenuId = row._meta?.parentMenuId;
+    const parentKey = parentMenuId == null ? null : String(parentMenuId);
+
+    if (!parentKey || !rowIds.has(parentKey)) {
+      rootRows.push(row);
+      return;
+    }
+
+    const siblings = childrenByParentId.get(parentKey) ?? [];
+    siblings.push(row);
+    childrenByParentId.set(parentKey, siblings);
+  });
+
+  return { childrenByParentId, rootRows };
 }
 
 function canDeleteRow(listKey, action) {

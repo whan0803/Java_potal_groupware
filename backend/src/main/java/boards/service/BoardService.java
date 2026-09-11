@@ -7,8 +7,10 @@ import boards.entity.Board;
 import boards.dto.BoardResponse;
 import boards.repository.BoardRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import post.repository.PostRepository;
 
 import java.util.List;
 
@@ -18,6 +20,7 @@ import java.util.List;
 public class BoardService {
 
     private final BoardRepository boardRepository;
+    private final PostRepository postRepository;
 
     //게시판 목록 조회
     public List<BoardResponse> getBoards() {
@@ -92,6 +95,30 @@ public class BoardService {
         }
 
         board.disable(userId);
+    }
+
+    // 게시판 실제 삭제
+    @Transactional
+    public void deleteBoard(Long boardId) {
+        Board board = findBoard(boardId);
+
+        if (postRepository.existsByBoardBoardIdAndUseYn(boardId, "Y")) {
+            throw new IllegalStateException(
+                    "게시글이 등록된 게시판은 삭제할 수 없습니다."
+            );
+        }
+
+        // 목록에 노출되지 않는 논리 삭제 게시글이 게시판 삭제를 막지 않도록 정리한다.
+        postRepository.deleteInactiveByBoardId(boardId);
+
+        try {
+            boardRepository.delete(board);
+            boardRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalStateException(
+                    "연결된 데이터가 있는 게시판은 삭제할 수 없습니다."
+            );
+        }
     }
 
 

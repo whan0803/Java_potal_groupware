@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import role.repository.RoleRepository;
@@ -295,6 +296,30 @@ public class UserService {
         }
 
         user.deactivate(actorId);
+    }
+
+    // 사용자 실제 삭제
+    @Transactional
+    public void deleteUser(
+            Long userId,
+            Long actorId
+    ) {
+        if (userId.equals(actorId)) {
+            throw new IllegalStateException(
+                    "현재 로그인한 사용자는 삭제할 수 없습니다."
+            );
+        }
+
+        User user = findUser(userId);
+
+        try {
+            userRepository.delete(user);
+            userRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalStateException(
+                    "업무 데이터가 연결된 사용자는 삭제할 수 없습니다. 미사용으로 변경해 주세요."
+            );
+        }
     }
 
     // 사용자 권한 수정

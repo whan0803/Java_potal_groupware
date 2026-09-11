@@ -102,6 +102,19 @@ public class UserController {
         return Map.of("message", "사용자가 비활성화 되었습니다");
     }
 
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> deleteUser(
+            @PathVariable Long userId,
+            Authentication authentication
+    ) {
+        userService.deleteUser(
+                userId,
+                currentUserId(authentication)
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{userId}/roles")
     public Map<String, String> updateRoles(
             @PathVariable Long userId,

@@ -74,4 +74,14 @@ public class BoardController {
 
         return ResponseEntity.noContent().build();
     }
+
+    // 게시판 실제 삭제
+    @DeleteMapping("/{boardId}")
+    public ResponseEntity<Void> deleteBoard(
+            @PathVariable Long boardId
+    ) {
+        boardService.deleteBoard(boardId);
+
+        return ResponseEntity.noContent().build();
+    }
 }

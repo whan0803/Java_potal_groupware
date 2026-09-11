@@ -14,6 +14,27 @@ const permissionKeys = [
 
 const isPermissionChecked = (value) => value === true || String(value ?? '').trim().toUpperCase() === 'Y';
 
+const toPermissionRows = (items) => {
+  const parentMenuIds = new Set(
+    items
+      .map((item) => item.parentMenuId)
+      .filter((menuId) => menuId != null)
+      .map(String),
+  );
+
+  return items
+    .filter((item) => !parentMenuIds.has(String(item.menuId)))
+    .map((item) => ({
+      menuId: item.menuId,
+      name: item.menuName,
+      url: item.menuUrl ?? '',
+      read: isPermissionChecked(item.readYn),
+      create: isPermissionChecked(item.createYn),
+      update: isPermissionChecked(item.updateYn),
+      delete: isPermissionChecked(item.deleteYn),
+    }));
+};
+
 function RoleMenuSettings() {
   const { pathname } = useLocation();
   const { user, lists, roleMenus, permissions, apiStatus, saveRoleMenus, refreshBackendState } = useApp();
@@ -39,15 +60,7 @@ function RoleMenuSettings() {
     if (!apiStatus.connected || !selectedRoleId) return;
     api.get(`/api/roles/${selectedRoleId}/menus`)
       .then((items) => {
-        setRows(items.map((item) => ({
-          menuId: item.menuId,
-          name: item.menuName,
-          url: item.menuUrl ?? '',
-          read: isPermissionChecked(item.readYn),
-          create: isPermissionChecked(item.createYn),
-          update: isPermissionChecked(item.updateYn),
-          delete: isPermissionChecked(item.deleteYn),
-        })));
+        setRows(toPermissionRows(items));
         setError('');
       })
       .catch((fetchError) => setError(fetchError.message || '권한별 메뉴를 불러오지 못했습니다.'));
@@ -102,7 +115,7 @@ function RoleMenuSettings() {
           </thead>
           <tbody>
             {rows.map((row, rowIndex) => (
-              <tr key={row.url}>
+              <tr key={row.menuId ?? row.url}>
                 <td>{row.name}</td>
                 <td>{row.url}</td>
                 {permissionKeys.map(([key]) => (

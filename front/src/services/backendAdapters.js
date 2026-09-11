@@ -682,11 +682,11 @@ export async function deleteBackendRow(listKey, row, user) {
   const meta = row?._meta ?? {};
   const userId = getCurrentUserId(user);
   const handlers = {
-    users: () => api.patch(`/api/users/${meta.userId}/deactivate`),
+    users: () => api.delete(`/api/users/${meta.userId}`),
     roles: () => api.delete(`/api/roles/${meta.roleId}`),
     menus: () => api.delete(`/api/menu/${meta.menuId}`),
     notices: () => api.patch(`/api/notices/${meta.noticeId}/delete`, { userId, admin: isAdminUser(user) }),
-    boards: () => api.patch(`/api/boards/${meta.boardId}/disable`, { userId }),
+    boards: () => api.delete(`/api/boards/${meta.boardId}`),
     posts: () => api.patch(`/api/posts/${meta.postId}/delete`, { userId, admin: isAdminUser(user) }),
     reservations: () => api.patch(`/api/reservations/${meta.reservationId}/cancel`),
     templates: () => api.delete(`/api/document-templates/${meta.templateId}`),

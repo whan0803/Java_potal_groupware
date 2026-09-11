@@ -14,6 +14,8 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -81,6 +83,36 @@ class UserApiTest {
                 )));
     }
 
+    @Test
+    void user_delete_removesUserAndAssignedRoles() throws Exception {
+        MockHttpSession session = login();
+        Long targetUserId = createDeleteTargetUser();
+
+        jdbcTemplate.update(
+                "insert into user_roles (user_id, role_id, created_at) values (?, ?, now())",
+                targetUserId,
+                roleIdA
+        );
+
+        mockMvc.perform(delete("/api/users/{userId}", targetUserId)
+                        .session(session))
+                .andExpect(status().isNoContent());
+
+        Integer userCount = jdbcTemplate.queryForObject(
+                "select count(*) from users where user_id = ?",
+                Integer.class,
+                targetUserId
+        );
+        Integer userRoleCount = jdbcTemplate.queryForObject(
+                "select count(*) from user_roles where user_id = ?",
+                Integer.class,
+                targetUserId
+        );
+
+        assertEquals(0, userCount);
+        assertEquals(0, userRoleCount);
+    }
+
     private MockHttpSession login() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -122,6 +154,32 @@ class UserApiTest {
         );
     }
 
+    private Long createDeleteTargetUser() {
+        return jdbcTemplate.queryForObject(
+                """
+                        insert into users (
+                            login_id,
+                            password,
+                            user_name,
+                            email,
+                            use_yn,
+                            created_at
+                        )
+                        values (
+                            'codex_user_delete_target',
+                            ?,
+                            'Codex Delete Target',
+                            'codex_user_delete_target@example.com',
+                            'Y',
+                            now()
+                        )
+                        returning user_id
+                        """,
+                Long.class,
+                PASSWORD_HASH
+        );
+    }
+
     private Long createRole(String roleCode, String roleName) {
         return jdbcTemplate.queryForObject(
                 """
@@ -148,7 +206,7 @@ class UserApiTest {
                         where user_id in (
                             select user_id
                             from users
-                            where login_id = 'codex_user_api'
+                            where login_id in ('codex_user_api', 'codex_user_delete_target')
                         )
                         or role_id in (
                             select role_id
@@ -158,7 +216,7 @@ class UserApiTest {
                         """
         );
         jdbcTemplate.update(
-                "delete from users where login_id = 'codex_user_api'"
+                "delete from users where login_id in ('codex_user_api', 'codex_user_delete_target')"
         );
         jdbcTemplate.update(
                 "delete from roles where role_code like 'ROLE_CODEX_USER_%'"
