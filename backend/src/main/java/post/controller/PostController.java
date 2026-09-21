@@ -103,4 +103,34 @@ public class PostController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{postId}/recommend")
+    public ResponseEntity<PostDetailResponse> recommendPost(
+            @PathVariable Long postId
+    ){
+        PostDetailResponse response =
+                postService.recommendPost(postId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{postId}/recommend/cancel")
+    public ResponseEntity<PostDetailResponse> cancelRecommendPost(
+            @PathVariable Long postId
+    ){
+        PostDetailResponse response =
+                postService.cancelRecommendPost(postId);
+
+        return  ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{postId}/dislike/cancael")
+    public  ResponseEntity<PostDetailResponse> dislikePost(
+            @PathVariable Long postId
+    ){
+        PostDetailResponse response =
+                postService.cancelDislikePost(postId);
+
+        return  ResponseEntity.ok(response);
+    }
 }
