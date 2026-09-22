@@ -1,5 +1,5 @@
 import DataTable from './DataTable.jsx';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import { api } from '../services/api.js';
@@ -12,6 +12,8 @@ function ListPage({ listKey }) {
   const config = lists[listKey];
   const [activeTab, setActiveTab] = useState(0);
   const [query, setQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const canUpdate = canUsePermission(user, permissions, pathname, 'update');
   const canDelete = canUsePermission(user, permissions, pathname, 'delete');
   const effectiveCanUpdate = canUpdate || ['tasks', 'reservations'].includes(listKey) || (listKey === 'approval' && isAdminUser(user));
@@ -22,6 +24,14 @@ function ListPage({ listKey }) {
     return rows.filter((row) => row.some((cell) => String(cell).includes(query.trim())));
   }, [config, activeTab, query]);
 
+  const totalPages = listKey === 'posts' ? Math.max(1, Math.ceil(filteredRows.length / pageSize)) : 1;
+
+  const displayedRows = listKey === 'posts' ? filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize) : filteredRows;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, activeTab]);
+
   return (
     <section className="content-card list-card">
       <div className="toolbar">
@@ -29,7 +39,7 @@ function ListPage({ listKey }) {
           <div className="tabs">
             {config.tabs.map((tab, index) => (
               <button
-                className={index === activeTab ? 'active' : ''}
+                className={index === activeTab ? "active" : ""}
                 type="button"
                 key={tab}
                 onClick={() => setActiveTab(index)}
@@ -50,7 +60,7 @@ function ListPage({ listKey }) {
       </div>
       <DataTable
         columns={config.columns}
-        rows={filteredRows}
+        rows={displayedRows}
         listKey={listKey}
         canUpdate={effectiveCanUpdate}
         canDelete={effectiveCanDelete}
@@ -58,12 +68,56 @@ function ListPage({ listKey }) {
         onAction={async (row, action) => {
           const rowIndex = config.rows.indexOf(row);
           try {
-            await handleTableAction({ listKey, action, row, rowIndex, user, navigate, updateRowStatus, removeRow, refreshBackendState });
+            await handleTableAction({
+              listKey,
+              action,
+              row,
+              rowIndex,
+              user,
+              navigate,
+              updateRowStatus,
+              removeRow,
+              refreshBackendState,
+            });
           } catch (error) {
-            window.alert(error.message || '처리 중 오류가 발생했습니다.');
+            window.alert(error.message || "처리 중 오류가 발생했습니다.");
           }
         }}
       />
+      {listKey === "posts" && totalPages > 1 && (
+        <div className="pagination">
+          <button
+            type="button"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((page) => page - 1)}
+          >
+            이전
+          </button>
+
+          {Array.from({ length: totalPages }, (_, index) => {
+            const pageNumber = index + 1;
+
+            return (
+              <button
+                type="button"
+                key={pageNumber}
+                className={currentPage === pageNumber ? "active" : ""}
+                onClick={() => setCurrentPage(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((page) => page + 1)}
+          >
+            다음
+          </button>
+        </div>
+      )}
     </section>
   );
 }

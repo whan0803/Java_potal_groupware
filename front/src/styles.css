@@ -2135,4 +2135,33 @@ h2 {
   .comment-compose > strong {
     grid-column: 1 / -1;
   }
+
+  .pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 24px;
+}
+
+.pagination button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #cbd1dc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.pagination button.active {
+  color: #fff;
+  border-color: #344991;
+  background: #344991;
+}
+
+.pagination button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 }

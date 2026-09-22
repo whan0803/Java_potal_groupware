@@ -66,7 +66,7 @@ export const listApi = {
   menus: () => api.get('/api/menu'),
   notices: () => api.get('/api/notices', { size: 200 }),
   boards: () => api.get('/api/boards'),
-  posts: () => api.get('/api/posts', { size: 200 }),
+  posts: (params = {}) => api.get('/api/posts', params), 
   resources: (type) => api.get('/api/reservations/resources', { type }),
   reservations: (resourceId) => api.get('/api/reservations', { resourceId }),
   approvals: () => api.get('/api/approvals'),
