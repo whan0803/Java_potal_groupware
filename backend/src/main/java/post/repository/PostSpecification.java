@@ -5,8 +5,6 @@ import post.entity.Post;
 
 public class PostSpecification {
 
-    private PostSpecification() {
-    }
 
     public static Specification<Post> useYnEquals(String useYn) {
         return (root, query, criteriaBuilder) ->

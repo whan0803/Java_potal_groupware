@@ -12,6 +12,8 @@ public record PostListResponse(
         Long writerId,
         String writerName,
         Integer viewCount,
+        Integer recommendCount,
+        Integer dislikeCount,
         LocalDateTime createdAt
 ) {
 
@@ -24,6 +26,8 @@ public record PostListResponse(
                 post.getWriter().getUserId(),
                 post.getWriter().getUserName(),
                 post.getViewCount(),
+                post.getRecommendCount(),
+                post.getDislikeCount(),
                 post.getCreatedAt()
         );
     }

@@ -131,7 +131,7 @@ function resolveEditingMeta(formKey, values, lists, editingRow) {
     menuEdit: (row) => row[0] === values.menuName && row[1] === (values.menuUrl || ''),
     noticeRegister: (row) => row[2] === values.title,
     boardRegister: (row) => row[1] === values.boardName,
-    postRegister: (row) => row[2] === values.title,
+    postRegister: (row) => row[1] === values.title,
     reservationRegister: (row) =>
       row[2] === values.resourceName &&
       row[5] === values.reservationDate &&
@@ -311,16 +311,14 @@ function mapPosts(response) {
   const rows = page(response).map((item, index) =>
     withMeta([
       String(index + 1),
-      item.boardName ?? item.boardId,
       item.title,
       item.writerName ?? '',
-      String(item.viewCount ?? item.viewCoun ?? 0),
       formatDate(item.createdAt),
-      ynLabel(item.useYn ?? 'Y'),
-      '상세',
+      String(item.viewCount ?? item.viewCoun ?? 0),
+      String(item.recommendCount ?? 0),
     ], item),
   );
-  return withRows('제목·내용·작성자 검색', ['No', '게시판', '제목', '작성자', '조회수', '등록일', '사용여부', '관리'], rows);
+  return withRows('제목·내용·작성자 검색', ['번호', '제목', '글쓴이', '작성일', '조회', '추천'], rows);
 }
 
 function mapReservations(items, resources) {

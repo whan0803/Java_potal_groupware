@@ -13,6 +13,8 @@ public record PostDetailResponse(
         Long writerId,
         String writerName,
         Integer viewCount,
+        Integer recommendCount,
+        Integer dislikeCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -26,6 +28,8 @@ public record PostDetailResponse(
                 post.getWriter().getUserId(),
                 post.getWriter().getUserName(),
                 post.getViewCount(),
+                post.getRecommendCount(),
+                post.getDislikeCount(),
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );

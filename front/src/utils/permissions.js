@@ -126,6 +126,8 @@ function isFormRoute(pathname) {
 }
 
 function normalizePath(path = '') {
+  if (typeof path !== 'string') return '';
+
   const [pathname] = path.split(/[?#]/);
   path = pathname;
   if (!path) return '';

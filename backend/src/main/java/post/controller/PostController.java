@@ -124,8 +124,18 @@ public class PostController {
         return  ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{postId}/dislike/cancael")
-    public  ResponseEntity<PostDetailResponse> dislikePost(
+    @PatchMapping("/{postId}/dislike")
+    public ResponseEntity<PostDetailResponse> dislikePost(
+            @PathVariable Long postId
+    ){
+        PostDetailResponse response =
+                postService.dislikePost(postId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{postId}/dislike/cancel")
+    public ResponseEntity<PostDetailResponse> cancelDislikePost(
             @PathVariable Long postId
     ){
         PostDetailResponse response =
@@ -133,4 +143,6 @@ public class PostController {
 
         return  ResponseEntity.ok(response);
     }
+
+
 }

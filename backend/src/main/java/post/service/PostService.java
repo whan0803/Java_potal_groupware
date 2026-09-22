@@ -29,6 +29,7 @@ public class PostService {
     private final BoardRepository boardRepository;
     private final UserRepository userRepository;
 
+
     // 게시글 목록 조회, 검색, 페이징
     public Page<PostListResponse> getPosts(
             PostSearchCondition condition,
@@ -124,6 +125,48 @@ public class PostService {
 
         post.delete(request.userId());
     }
+
+    //추천 증가
+    @Transactional
+    public PostDetailResponse recommendPost(Long postId) {
+        Post post = findActivePost(postId);
+
+        post.increaseRecommendCount();
+
+        return PostDetailResponse.from(post);
+    }
+
+    //추천 취소
+    @Transactional
+    public PostDetailResponse cancelRecommendPost(Long postId){
+        Post post = findActivePost(postId);
+
+        post.decreaseRecommendCount();
+
+        return PostDetailResponse.from(post);
+    }
+
+    //비추천 증가
+    @Transactional
+    public PostDetailResponse dislikePost(Long postId) {
+        Post post = findActivePost(postId);
+
+        post.increaseDislikeCount();
+
+        return PostDetailResponse.from(post);
+    }
+
+    //비추천 감소
+    @Transactional
+    public PostDetailResponse cancelDislikePost(Long postId) {
+        Post post = findActivePost(postId);
+
+        post.decreaseDislikeCount();
+
+        return PostDetailResponse.from(post);
+    }
+
+
 
     // 사용 중인 게시글 조회
     private Post findActivePost(Long postId) {

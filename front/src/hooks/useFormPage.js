@@ -275,10 +275,9 @@ function rowToValues(formKey, row) {
       useYn: row[4],
     }),
     postRegister: () => ({
-      boardId: String(row._meta?.boardId ?? row[1]),
-      title: row[2],
+      boardId: String(row._meta?.boardId ?? ''),
+      title: row[1],
       content: row._meta?.content ?? '',
-      useYn: row[6],
     }),
     reservationRegister: () => ({
       resourceName: row[2],

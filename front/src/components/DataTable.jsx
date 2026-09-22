@@ -203,8 +203,8 @@ function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDele
   const actionColumnIndex = columns.findIndex((column) => ['관리', '처리'].includes(column));
 
   return (
-    <div className="table-wrap">
-      <table>
+    <div className={`table-wrap${listKey === 'posts' ? ' posts-table-wrap' : ''}`}>
+      <table className={listKey === 'posts' ? 'posts-table' : undefined}>
         <thead>
           <tr>
             {columns.map((column) => (
@@ -214,7 +214,19 @@ function DataTable({ columns, rows, onAction, listKey, canUpdate = true, canDele
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={`${row[0]}-${rowIndex}`}>
+            <tr
+              className={listKey === 'posts' ? 'clickable-post-row' : undefined}
+              key={`${row[0]}-${rowIndex}`}
+              onClick={listKey === 'posts' ? () => onAction?.(row, '상세') : undefined}
+              onKeyDown={listKey === 'posts' ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onAction?.(row, '상세');
+                }
+              } : undefined}
+              role={listKey === 'posts' ? 'link' : undefined}
+              tabIndex={listKey === 'posts' ? 0 : undefined}
+            >
               {row.map((cell, cellIndex) => (
                 <td key={`${cell}-${cellIndex}`}>
                   {renderCell(cell, {

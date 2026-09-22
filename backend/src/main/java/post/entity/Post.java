@@ -55,6 +55,12 @@ public class Post {
     @Column(name = "updated_by")
     private Long updatedBy;
 
+    @Column(name = "recommend_count", nullable = false)
+    private Integer recommendCount = 0;
+
+    @Column(name = "dislike_count", nullable = false)
+    private Integer dislikeCount = 0;
+
     public static Post create(
             Board board,
             String title,
@@ -67,12 +73,34 @@ public class Post {
         post.title = title;
         post.content = content;
         post.writer = writer;
+        post.recommendCount = 0;
+        post.dislikeCount = 0;
         post.viewCount = 0;
         post.useYn = "Y";
         post.createdAt = LocalDateTime.now();
         post.createdBy = writer.getUserId();
 
         return post;
+    }
+
+    public void increaseRecommendCount(){
+        this.recommendCount++;
+    }
+
+    public void decreaseRecommendCount(){
+        if(this.recommendCount > 0) {
+            this.recommendCount--;
+        }
+    }
+
+    public void increaseDislikeCount() {
+        dislikeCount++;
+    }
+
+    public void decreaseDislikeCount(){
+        if(this.dislikeCount > 0) {
+            this.dislikeCount--;
+        }
     }
 
     public void update(
