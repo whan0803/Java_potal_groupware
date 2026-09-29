@@ -15,6 +15,7 @@ import user.entity.Role;
 import user.entity.User;
 import user.entity.UserRole;
 import user.repository.UserRepository;
+import user.repository.UserRoleRepository;
 
 import java.util.*;
 import java.util.function.Function;
@@ -28,6 +29,7 @@ public class RoleService {
     private final RoleMenuRepository roleMenuRepository;
     private final MenuRepository menuRepository;
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
 
 
 
@@ -93,14 +95,20 @@ public class RoleService {
 
         return roleRepository.findAll(specification).stream()
                 .sorted(Comparator.comparing(Role::getRoleId).reversed())
-                .map(RoleResponse::from)
+                .map(role -> RoleResponse.from(
+                        role,
+                        userRoleRepository.countByRoleRoleId(role.getRoleId())
+                ))
                 .toList();
     }
 
     //권한 상세 조회
     public RoleResponse getRole(Long roleId) {
         Role role = findRole(roleId);
-        return RoleResponse.from(role);
+        return RoleResponse.from(
+                role,
+                userRoleRepository.countByRoleRoleId(roleId)
+        );
     }
 
     private Role findRole(Long roleId) {
@@ -145,7 +153,15 @@ public class RoleService {
     public void deleteRole(Long roleId){
         Role role = findRole(roleId);
 
+        if ("ROLE_ADMIN".equalsIgnoreCase(role.getRoleCode())
+                || "ADMIN".equalsIgnoreCase(role.getRoleCode())) {
+            throw new IllegalStateException(
+                    "시스템 관리자 권한은 삭제할 수 없습니다."
+            );
+        }
+
         roleMenuRepository.deleteByRoleRoleId(roleId);
+        userRoleRepository.deleteAllByRoleRoleId(roleId);
 
         roleRepository.delete(role);
     }

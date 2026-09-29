@@ -212,15 +212,10 @@ spring.jpa.properties.hibernate.format_sql=true
 
 ---
 
-# 테스트 계정
+# 관리자 계정
 
-관리자 기능 테스트를 위한 기본 계정입니다.
-
-| 구분       | 값          |
-| -------- | ---------- |
-| ID       | `admin`    |
-| Password | `admin123` |
-| 권한       | 관리자        |
+관리자 계정과 비밀번호는 애플리케이션 코드가 아닌 Database에서 관리합니다.
+관리자 권한은 사용자에게 `ROLE_ADMIN` 역할을 연결하여 부여합니다.
 
 ---
 
@@ -235,19 +230,10 @@ spring.jpa.properties.hibernate.format_sql=true
        ↓
 3. http://localhost:5173 접속
        ↓
-4. 관리자 계정 로그인
+4. Database에 등록된 계정으로 로그인
        ↓
 5. 통합 포털 시스템 사용
 ```
-
-관리자 계정:
-
-```text
-ID: admin
-PW: admin123
-```
-
----
 
 # 시스템 구성
 

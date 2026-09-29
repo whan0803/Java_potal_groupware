@@ -32,7 +32,7 @@ export const listScreens = {
   posts: {
     search: '제목·내용·작성자 검색',
     total: '총 0건',
-    columns: ['번호', '제목', '글쓴이', '작성일', '조회', '추천'],
+    columns: ['번호', '제목', '글쓴이', '작성일', '조회', '좋아요'],
     rows: [],
   },
   reservations: {

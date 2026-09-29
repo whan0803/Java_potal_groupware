@@ -7,14 +7,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import post.dto.PostCreateRequest;
-import post.dto.PostDeleteRequest;
 import post.dto.PostDetailResponse;
 import post.dto.PostListResponse;
 import post.dto.PostSearchCondition;
 import post.dto.PostUpdateRequest;
 import post.service.PostService;
+import security.CustomUserDetails;
 
 import java.net.URI;
 
@@ -63,10 +64,11 @@ public class PostController {
     @GetMapping("/{postId}")
     public ResponseEntity<PostDetailResponse> getPost(
             @PathVariable Long postId,
-            @RequestParam(defaultValue = "true") boolean increaseView
+            @RequestParam(defaultValue = "true") boolean increaseView,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         PostDetailResponse response =
-                postService.getPost(postId, increaseView);
+                postService.getPost(postId, increaseView, currentUser.getUserId());
 
         return ResponseEntity.ok(response);
     }
@@ -100,49 +102,55 @@ public class PostController {
     @PatchMapping("/{postId}/delete")
     public ResponseEntity<Void> deletePost(
             @PathVariable Long postId,
-            @Valid @RequestBody PostDeleteRequest request
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
-        postService.deletePost(postId, request);
+        boolean admin = currentUser.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        postService.deletePost(postId, currentUser.getUserId(), admin);
 
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{postId}/recommend")
     public ResponseEntity<PostDetailResponse> recommendPost(
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ){
         PostDetailResponse response =
-                postService.recommendPost(postId);
+                postService.recommendPost(postId, currentUser.getUserId());
 
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{postId}/recommend/cancel")
     public ResponseEntity<PostDetailResponse> cancelRecommendPost(
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ){
         PostDetailResponse response =
-                postService.cancelRecommendPost(postId);
+                postService.cancelRecommendPost(postId, currentUser.getUserId());
 
         return  ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{postId}/dislike")
     public ResponseEntity<PostDetailResponse> dislikePost(
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ){
         PostDetailResponse response =
-                postService.dislikePost(postId);
+                postService.dislikePost(postId, currentUser.getUserId());
 
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{postId}/dislike/cancel")
     public ResponseEntity<PostDetailResponse> cancelDislikePost(
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ){
         PostDetailResponse response =
-                postService.cancelDislikePost(postId);
+                postService.cancelDislikePost(postId, currentUser.getUserId());
 
         return  ResponseEntity.ok(response);
     }

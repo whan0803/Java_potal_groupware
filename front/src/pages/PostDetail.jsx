@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, attachmentApi } from '../services/api.js';
 import { useApp } from '../context/AppContext.jsx';
 
@@ -10,7 +10,7 @@ const toVoteCount = (value) => {
   return Number.isFinite(count) ? Math.max(0, count) : 0;
 };
 
-function PostReactions({ postId, recommendCount, dislikeCount, onChanged }) {
+function PostReactions({ postId, recommendCount, dislikeCount, myReaction, onChanged }) {
   const [counts, setCounts] = useState({ recommend: 0, dislike: 0 });
   const [selectedReaction, setSelectedReaction] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -21,8 +21,8 @@ function PostReactions({ postId, recommendCount, dislikeCount, onChanged }) {
       recommend: toVoteCount(recommendCount),
       dislike: toVoteCount(dislikeCount),
     });
-    setSelectedReaction(null);
-  }, [postId, recommendCount, dislikeCount]);
+    setSelectedReaction(['recommend', 'dislike'].includes(myReaction) ? myReaction : null);
+  }, [postId, recommendCount, dislikeCount, myReaction]);
 
   const handleReaction = async (reaction) => {
     if (!postId || submitting) return;
@@ -35,10 +35,9 @@ function PostReactions({ postId, recommendCount, dislikeCount, onChanged }) {
     try {
       let detail;
 
-      if (previousReaction) {
+      if (previousReaction === reaction) {
         detail = await api.patch(`/api/posts/${postId}/${previousReaction}/cancel`);
-      }
-      if (nextReaction) {
+      } else {
         detail = await api.patch(`/api/posts/${postId}/${nextReaction}`);
       }
 
@@ -46,7 +45,7 @@ function PostReactions({ postId, recommendCount, dislikeCount, onChanged }) {
         recommend: toVoteCount(detail?.recommendCount ?? counts.recommend),
         dislike: toVoteCount(detail?.dislikeCount ?? counts.dislike),
       });
-      setSelectedReaction(nextReaction);
+      setSelectedReaction(detail?.myReaction ?? null);
       onChanged?.();
     } catch (reactionError) {
       setError(reactionError.message || '평가를 처리하지 못했습니다.');
@@ -56,41 +55,45 @@ function PostReactions({ postId, recommendCount, dislikeCount, onChanged }) {
   };
 
   return (
-    <div className="post-reactions" aria-label="게시글 평가">
-      <output className="reaction-count recommend-count" aria-label={`추천 ${counts.recommend}개`}>
-        {counts.recommend}
-      </output>
-      <button
-        aria-label="이 게시글 추천"
-        aria-pressed={selectedReaction === 'recommend'}
-        className={`reaction-button recommend${selectedReaction === 'recommend' ? ' selected' : ''}`}
-        disabled={submitting}
-        onClick={() => handleReaction('recommend')}
-        type="button"
-      >
-        <svg aria-hidden="true" viewBox="0 0 48 48">
-          <path d="m24 5.2 5.7 11.6 12.8 1.9-9.3 9 2.2 12.7L24 34.5l-11.4 5.9 2.2-12.7-9.3-9 12.8-1.9L24 5.2Z" />
-        </svg>
-        <span>개념</span>
-      </button>
-      <button
-        aria-label="이 게시글 비추천"
-        aria-pressed={selectedReaction === 'dislike'}
-        className={`reaction-button dislike${selectedReaction === 'dislike' ? ' selected' : ''}`}
-        disabled={submitting}
-        onClick={() => handleReaction('dislike')}
-        type="button"
-      >
-        <svg aria-hidden="true" viewBox="0 0 48 48">
-          <path d="M19 5h10v19h9L24 43 10 24h9V5Z" />
-        </svg>
-        <span>비추</span>
-      </button>
-      <output className="reaction-count dislike-count" aria-label={`비추천 ${counts.dislike}개`}>
-        {counts.dislike}
-      </output>
+    <section className="post-reactions" aria-label="게시글 피드백">
+      <div className="reaction-heading">
+        <span>게시글 피드백</span>
+        <strong>이 글이 도움이 되었나요?</strong>
+      </div>
+      <div className="reaction-options">
+        <button
+          aria-label={`좋아요 ${counts.recommend}개`}
+          aria-pressed={selectedReaction === 'recommend'}
+          className={`reaction-button recommend${selectedReaction === 'recommend' ? ' selected' : ''}`}
+          disabled={submitting}
+          onClick={() => handleReaction('recommend')}
+          type="button"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M7.8 10.2 11.6 3c.4-.8 1.5-.9 2.1-.3.4.4.5.9.4 1.4l-.7 4h4.5c1.5 0 2.6 1.4 2.2 2.8l-1.5 6.2c-.3 1.2-1.4 2.1-2.6 2.1H7.8v-9Z" />
+            <path d="M3.5 9.8h4.3v9.7H3.5z" />
+          </svg>
+          <span>좋아요</span>
+          <output>{counts.recommend}</output>
+        </button>
+        <button
+          aria-label={`싫어요 ${counts.dislike}개`}
+          aria-pressed={selectedReaction === 'dislike'}
+          className={`reaction-button dislike${selectedReaction === 'dislike' ? ' selected' : ''}`}
+          disabled={submitting}
+          onClick={() => handleReaction('dislike')}
+          type="button"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m7.8 13.8 3.8 7.2c.4.8 1.5.9 2.1.3.4-.4.5-.9.4-1.4l-.7-4h4.5c1.5 0 2.6-1.4 2.2-2.8l-1.5-6.2c-.3-1.2-1.4-2.1-2.6-2.1H7.8v9Z" />
+            <path d="M3.5 4.5h4.3v9.7H3.5z" />
+          </svg>
+          <span>싫어요</span>
+          <output>{counts.dislike}</output>
+        </button>
+      </div>
       {error ? <p className="reaction-error">{error}</p> : null}
-    </div>
+    </section>
   );
 }
 
@@ -212,9 +215,13 @@ function PostComments({ currentUser, postId }) {
   return (
     <section className="post-comments" aria-labelledby="comments-title">
       <div className="comments-toolbar">
-        <strong id="comments-title">
-          전체 댓글 <span>{comments.length}</span>개
-        </strong>
+        <div className="comments-heading">
+          <div>
+            <strong id="comments-title">댓글</strong>
+            <span>{comments.length}</span>
+          </div>
+          <p>게시글에 대한 의견을 함께 나눠보세요.</p>
+        </div>
         <div className="comment-sort" aria-label="댓글 정렬">
           <button
             className={sortOrder === 'oldest' ? 'active' : ''}
@@ -233,25 +240,67 @@ function PostComments({ currentUser, postId }) {
         </div>
       </div>
 
+      <div className="comment-compose">
+        <div className="comment-compose-head">
+          <span className="comment-avatar" aria-hidden="true">
+            {(currentUser?.name ?? '사').slice(0, 1)}
+          </span>
+          <div>
+            <strong>{replyTarget ? '답글 작성' : '댓글 작성'}</strong>
+            <span>{replyTarget ? `${replyTarget.writerName}님에게 답글을 남깁니다.` : (currentUser?.name ?? '사용자')}</span>
+          </div>
+          {replyTarget ? (
+            <button onClick={() => setReplyTarget(null)} type="button">답글 취소</button>
+          ) : null}
+        </div>
+        <div className="comment-input-wrap">
+          <textarea
+            aria-label="댓글 내용"
+            maxLength={1000}
+            onChange={(event) => setCommentText(event.target.value)}
+            onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') submitComment();
+            }}
+            placeholder="내용을 입력하세요. 서로를 배려하는 댓글 문화를 함께 만들어주세요."
+            value={commentText}
+          />
+          <div className="comment-compose-footer">
+            <span>{commentText.length}/1000</span>
+            <small>Ctrl(⌘)+Enter로 등록</small>
+            <button
+              className="comment-submit"
+              disabled={!commentText.trim() || submitting}
+              onClick={submitComment}
+              type="button"
+            >
+              {submitting ? '등록 중' : (replyTarget ? '답글 등록' : '댓글 등록')}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="comment-list">
         {orderedComments.length ? orderedComments.map((comment) => (
-          <article className={`comment-item${comment.parentCommentId ? ' reply' : ''}`} key={comment.id}>
-            <div className="comment-author">
+          <article className={`comment-item${comment.parentCommentId ? ' reply' : ''}${comment.deleted ? ' deleted' : ''}`} key={comment.id}>
+            <header className="comment-author">
               <span className="comment-avatar" aria-hidden="true">
                 {(comment.writerName || '사').slice(0, 1)}
               </span>
-              <strong>{comment.writerName}</strong>
-            </div>
+              <div>
+                <strong>{comment.writerName}</strong>
+                <time dateTime={comment.createdAt}>{formatCommentDate(comment.createdAt)}</time>
+              </div>
+              {comment.parentCommentId ? <span className="reply-label">답글</span> : null}
+            </header>
             <p>{comment.content}</p>
-            <time dateTime={comment.createdAt}>{formatCommentDate(comment.createdAt)}</time>
-            <div className="comment-actions">
+            <footer className="comment-actions">
               {!comment.deleted ? (
                 <button
                   className="comment-reply"
                   onClick={() => setReplyTarget(comment)}
                   type="button"
                 >
-                  답글
+                  답글 작성
                 </button>
               ) : null}
               {isMyComment(comment) && !comment.deleted ? (
@@ -262,46 +311,16 @@ function PostComments({ currentUser, postId }) {
                   onClick={() => deleteComment(comment.id)}
                   type="button"
                 >
-                  ×
+                  삭제
                 </button>
               ) : null}
-            </div>
+            </footer>
           </article>
         )) : (
           <p className="comments-empty">
             {loading ? '댓글을 불러오는 중입니다.' : '아직 댓글이 없습니다. 첫 댓글을 남겨보세요.'}
           </p>
         )}
-      </div>
-
-      <div className="comment-compose">
-        <strong>
-          {replyTarget ? `${replyTarget.writerName}에게 답글` : (currentUser?.name ?? '사용자')}
-          {replyTarget ? (
-            <button aria-label="답글 작성 취소" onClick={() => setReplyTarget(null)} type="button">×</button>
-          ) : null}
-        </strong>
-        <div className="comment-input-wrap">
-          <textarea
-            aria-label="댓글 내용"
-            maxLength={1000}
-            onChange={(event) => setCommentText(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') submitComment();
-            }}
-            placeholder="댓글을 입력하세요. Ctrl(⌘)+Enter로 등록할 수 있습니다."
-            value={commentText}
-          />
-          <span>{commentText.length}/1000</span>
-        </div>
-        <button
-          className="comment-submit"
-          disabled={!commentText.trim() || submitting}
-          onClick={submitComment}
-          type="button"
-        >
-          {submitting ? '처리 중' : '등록'}
-        </button>
       </div>
       {error ? <p className="comment-error">{error}</p> : null}
     </section>
@@ -310,6 +329,7 @@ function PostComments({ currentUser, postId }) {
 
 function PostDetail() {
   const { user, lists, refreshBackendState } = useApp();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const index = Number.parseInt(searchParams.get('index') ?? '0', 10);
   const row = lists.posts.rows[index] ?? lists.posts.rows[0];
@@ -317,7 +337,28 @@ function PostDetail() {
   const [post, setPost] = useState(row?._meta ?? null);
   const [attachments, setAttachments] = useState([]);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const canEdit = isAdminUser(user) || Number(post?.writerId ?? row?._meta?.writerId) === Number(user?.userId);
+
+  const deletePost = async () => {
+    if (!postId || deleting) return;
+    if (!window.confirm('이 게시글을 삭제하시겠습니까?')) return;
+
+    setDeleting(true);
+    setError('');
+    try {
+      await api.patch(`/api/posts/${postId}/delete`, {
+        userId: user?.userId,
+        admin: isAdminUser(user),
+      });
+      await refreshBackendState();
+      navigate('/posts', { replace: true });
+    } catch (deleteError) {
+      setError(deleteError.message || '게시글을 삭제하지 못했습니다.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -391,6 +432,7 @@ function PostDetail() {
         dislikeCount={post?.dislikeCount ?? post?.unrecommendCount ?? row?._meta?.dislikeCount ?? row?._meta?.unrecommendCount}
         postId={postId}
         recommendCount={post?.recommendCount ?? row?._meta?.recommendCount ?? row?.[5]}
+        myReaction={post?.myReaction}
         onChanged={refreshBackendState}
       />
       <PostComments
@@ -403,7 +445,14 @@ function PostDetail() {
         {canEdit ? (
           <>
             <Link className="button primary" to={`/posts/new?index=${index}`}>수정</Link>
-            <button className="button danger" type="button">삭제</button>
+            <button
+              className="button danger"
+              disabled={deleting}
+              onClick={deletePost}
+              type="button"
+            >
+              {deleting ? '삭제 중' : '삭제'}
+            </button>
           </>
         ) : null}
       </div>

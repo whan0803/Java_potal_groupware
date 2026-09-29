@@ -9,12 +9,14 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import post.dto.PostCreateRequest;
-import post.dto.PostDeleteRequest;
 import post.dto.PostDetailResponse;
 import post.dto.PostListResponse;
 import post.dto.PostSearchCondition;
 import post.dto.PostUpdateRequest;
 import post.entity.Post;
+import post.entity.PostReaction;
+import post.entity.PostReactionType;
+import post.repository.PostReactionRepository;
 import post.repository.PostRepository;
 import post.repository.PostSpecification;
 import user.entity.User;
@@ -26,6 +28,7 @@ import user.repository.UserRepository;
 public class PostService {
 
     private final PostRepository postRepository;
+    private final PostReactionRepository postReactionRepository;
     private final BoardRepository boardRepository;
     private final UserRepository userRepository;
 
@@ -59,7 +62,8 @@ public class PostService {
     @Transactional
     public PostDetailResponse getPost(
             Long postId,
-            boolean increaseView
+            boolean increaseView,
+            Long userId
     ) {
 
         Post post = findActivePost(postId);
@@ -68,7 +72,7 @@ public class PostService {
             post.increaseViewCount();
         }
 
-        return PostDetailResponse.from(post);
+        return response(post, userId);
     }
 
     // 게시글 등록
@@ -113,59 +117,113 @@ public class PostService {
     @Transactional
     public void deletePost(
             Long postId,
-            PostDeleteRequest request
+            Long userId,
+            boolean admin
     ) {
         Post post = findActivePost(postId);
 
         validateWriterOrAdmin(
                 post,
-                request.userId(),
-                request.admin()
+                userId,
+                admin
         );
 
-        post.delete(request.userId());
+        post.delete(userId);
     }
 
-    //추천 증가
+    // 사용자별 좋아요 등록 또는 싫어요에서 변경
     @Transactional
-    public PostDetailResponse recommendPost(Long postId) {
-        Post post = findActivePost(postId);
-
-        post.increaseRecommendCount();
-
-        return PostDetailResponse.from(post);
+    public PostDetailResponse recommendPost(Long postId, Long userId) {
+        return react(postId, userId, PostReactionType.RECOMMEND);
     }
 
-    //추천 취소
+    // 사용자별 좋아요 취소
     @Transactional
-    public PostDetailResponse cancelRecommendPost(Long postId){
-        Post post = findActivePost(postId);
-
-        post.decreaseRecommendCount();
-
-        return PostDetailResponse.from(post);
+    public PostDetailResponse cancelRecommendPost(Long postId, Long userId){
+        return cancelReaction(postId, userId, PostReactionType.RECOMMEND);
     }
 
-    //비추천 증가
+    // 사용자별 싫어요 등록 또는 좋아요에서 변경
     @Transactional
-    public PostDetailResponse dislikePost(Long postId) {
-        Post post = findActivePost(postId);
-
-        post.increaseDislikeCount();
-
-        return PostDetailResponse.from(post);
+    public PostDetailResponse dislikePost(Long postId, Long userId) {
+        return react(postId, userId, PostReactionType.DISLIKE);
     }
 
-    //비추천 감소
+    // 사용자별 싫어요 취소
     @Transactional
-    public PostDetailResponse cancelDislikePost(Long postId) {
-        Post post = findActivePost(postId);
-
-        post.decreaseDislikeCount();
-
-        return PostDetailResponse.from(post);
+    public PostDetailResponse cancelDislikePost(Long postId, Long userId) {
+        return cancelReaction(postId, userId, PostReactionType.DISLIKE);
     }
 
+    private PostDetailResponse react(
+            Long postId,
+            Long userId,
+            PostReactionType nextType
+    ) {
+        Post post = findActivePostForUpdate(postId);
+        PostReaction reaction = postReactionRepository
+                .findByPostPostIdAndUserUserId(postId, userId)
+                .orElse(null);
+
+        if (reaction == null) {
+            User user = findUser(userId);
+            postReactionRepository.save(PostReaction.create(post, user, nextType));
+            increaseCount(post, nextType);
+        } else if (reaction.getReactionType() != nextType) {
+            decreaseCount(post, reaction.getReactionType());
+            increaseCount(post, nextType);
+            reaction.changeType(nextType);
+        }
+
+        return PostDetailResponse.from(post, nextType.getApiValue());
+    }
+
+    private PostDetailResponse cancelReaction(
+            Long postId,
+            Long userId,
+            PostReactionType cancelType
+    ) {
+        Post post = findActivePostForUpdate(postId);
+        PostReaction reaction = postReactionRepository
+                .findByPostPostIdAndUserUserId(postId, userId)
+                .orElse(null);
+
+        if (reaction != null && reaction.getReactionType() == cancelType) {
+            postReactionRepository.delete(reaction);
+            decreaseCount(post, cancelType);
+            return PostDetailResponse.from(post, null);
+        }
+
+        String currentReaction = reaction == null
+                ? null
+                : reaction.getReactionType().getApiValue();
+        return PostDetailResponse.from(post, currentReaction);
+    }
+
+    private void increaseCount(Post post, PostReactionType reactionType) {
+        if (reactionType == PostReactionType.RECOMMEND) {
+            post.increaseRecommendCount();
+        } else {
+            post.increaseDislikeCount();
+        }
+    }
+
+    private void decreaseCount(Post post, PostReactionType reactionType) {
+        if (reactionType == PostReactionType.RECOMMEND) {
+            post.decreaseRecommendCount();
+        } else {
+            post.decreaseDislikeCount();
+        }
+    }
+
+    private PostDetailResponse response(Post post, Long userId) {
+        String myReaction = postReactionRepository
+                .findByPostPostIdAndUserUserId(post.getPostId(), userId)
+                .map(PostReaction::getReactionType)
+                .map(PostReactionType::getApiValue)
+                .orElse(null);
+        return PostDetailResponse.from(post, myReaction);
+    }
 
 
     // 사용 중인 게시글 조회
@@ -176,6 +234,23 @@ public class PostService {
                         new IllegalArgumentException(
                                 "게시글을 찾을 수 없습니다. postId: "
                                         + postId
+                        )
+                );
+
+        if (!"Y".equals(post.getUseYn())) {
+            throw new IllegalStateException(
+                    "삭제되었거나 사용 중지된 게시글입니다."
+            );
+        }
+
+        return post;
+    }
+
+    private Post findActivePostForUpdate(Long postId) {
+        Post post = postRepository.findByIdForUpdate(postId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "게시글을 찾을 수 없습니다. postId: " + postId
                         )
                 );
 

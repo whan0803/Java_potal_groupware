@@ -8,6 +8,7 @@ import role.service.RoleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import security.CustomUserDetails;
 
@@ -60,6 +61,7 @@ public class RoleController {
         return ResponseEntity.noContent().build();
     }
     @DeleteMapping("/{roleId}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteRole(
             @PathVariable Long roleId
 

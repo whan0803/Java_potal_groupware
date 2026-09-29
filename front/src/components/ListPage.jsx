@@ -32,6 +32,10 @@ function ListPage({ listKey }) {
     setCurrentPage(1);
   }, [query, activeTab]);
 
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   return (
     <section className="content-card list-card">
       <div className="toolbar">
@@ -84,8 +88,8 @@ function ListPage({ listKey }) {
           }
         }}
       />
-      {listKey === "posts" && totalPages > 1 && (
-        <div className="pagination">
+      {listKey === "posts" && (
+        <nav className="pagination" aria-label="게시글 페이지 이동">
           <button
             type="button"
             disabled={currentPage === 1}
@@ -116,7 +120,10 @@ function ListPage({ listKey }) {
           >
             다음
           </button>
-        </div>
+          <span className="pagination-status">
+            {currentPage} / {totalPages} 페이지
+          </span>
+        </nav>
       )}
     </section>
   );
@@ -154,6 +161,13 @@ async function handleTableAction({ listKey, action, row, rowIndex, user, navigat
     if (!window.confirm('이 문서양식을 완전히 삭제하시겠습니까? 사용 중인 양식은 삭제할 수 없습니다.')) return;
     await removeRow(listKey, rowIndex);
     window.alert('문서양식이 삭제되었습니다.');
+    return;
+  }
+
+  if (listKey === 'roles' && action === '삭제') {
+    if (!window.confirm('이 권한을 삭제하면 연결된 사용자 권한과 메뉴 설정도 함께 삭제됩니다. 계속하시겠습니까?')) return;
+    await removeRow(listKey, rowIndex);
+    window.alert('권한이 삭제되었습니다.');
     return;
   }
 

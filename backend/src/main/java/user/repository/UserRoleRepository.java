@@ -8,4 +8,8 @@ import java.util.List;
 public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
 
     void deleteAllByUserUserId(Long userId);
+
+    void deleteAllByRoleRoleId(Long roleId);
+
+    long countByRoleRoleId(Long roleId);
 }

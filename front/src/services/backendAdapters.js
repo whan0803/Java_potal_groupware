@@ -254,7 +254,7 @@ function mapRoles(items) {
       item.roleCode,
       item.roleName,
       item.roleDescription ?? '',
-      '-',
+      String(item.userCount ?? 0),
       ynLabel(item.useYn),
       formatDate(item.createdAt),
       '수정',
@@ -318,7 +318,7 @@ function mapPosts(response) {
       String(item.recommendCount ?? 0),
     ], item),
   );
-  return withRows('제목·내용·작성자 검색', ['번호', '제목', '글쓴이', '작성일', '조회', '추천'], rows);
+  return withRows('제목·내용·작성자 검색', ['번호', '제목', '글쓴이', '작성일', '조회', '좋아요'], rows);
 }
 
 function mapReservations(items, resources) {

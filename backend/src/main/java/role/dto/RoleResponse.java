@@ -9,6 +9,7 @@ public record RoleResponse(
         String roleCode,
         String roleName,
         String roleDescription,
+        Long userCount,
         String useYn,
         LocalDateTime createdAt,
         Long createdBy,
@@ -16,12 +17,13 @@ public record RoleResponse(
         Long updatedBy
 
 ) {
-    public static RoleResponse from(Role role) {
+    public static RoleResponse from(Role role, long userCount) {
         return new RoleResponse(
                 role.getRoleId(),
                 role.getRoleCode(),
                 role.getRoleName(),
                 role.getRoleDescription(),
+                userCount,
                 role.getUseYn(),
                 role.getCreatedAt(),
                 role.getCreatedBy(),

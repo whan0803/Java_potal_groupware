@@ -44,10 +44,6 @@ const formAuditIdKeys = {
   codeRegister: 'codeGroupId',
 };
 
-const adminTestAccounts = [
-  { id: 'admin', password: 'admin123', name: '관리자', role: '시스템 관리자', enabled: true },
-];
-
 const displayRoleCode = (roleCode) => String(roleCode ?? '').replace(/^ROLE_/, '');
 
 const toAuditData = (data) => {
@@ -74,7 +70,6 @@ const toUserSession = (response) => ({
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [accounts, setAccounts] = useState(adminTestAccounts);
   const [apiStatus, setApiStatus] = useState({ connected: false, loading: false, error: '' });
 
   const [lists, setLists] = useState(listScreens);
@@ -173,27 +168,10 @@ export function AppProvider({ children }) {
       setApiStatus({ connected: true, loading: true, error: '' });
       return { ok: true };
     } catch (error) {
-      if (!error.status) {
-        const localResult = localLogin({ id, password });
-        if (localResult.ok) {
-          setApiStatus({ connected: false, loading: false, error: error.message });
-          return localResult;
-        }
-      }
       setUser(null);
       setApiStatus({ connected: false, loading: false, error: error.message });
       return { ok: false, message: error.message || '로그인에 실패했습니다.' };
     }
-  };
-
-  const localLogin = ({ id, password }) => {
-    const account = accounts.find((item) => item.id === id);
-    if (!account) return { ok: false, message: '존재하지 않는 사용자입니다.' };
-    if (account.password !== password) return { ok: false, message: '비밀번호가 일치하지 않습니다.' };
-    if (!account.enabled) return { ok: false, message: '사용 중지된 계정입니다.' };
-
-    setUser({ id: account.id, name: account.name, role: account.role });
-    return { ok: true };
   };
 
   const logout = async () => {
@@ -229,15 +207,7 @@ export function AppProvider({ children }) {
       }
     }
 
-    const account = accounts.find((item) => item.id === user?.id);
-    if (account?.password !== currentPassword) {
-      return { ok: false, message: '기존 비밀번호가 일치하지 않습니다.' };
-    }
-    setAccounts((current) =>
-      current.map((item) => (item.id === user?.id ? { ...item, password: nextPassword } : item)),
-    );
-    writeAuditLog('users', 'PASSWORD_CHANGE', `${user?.id} 비밀번호 변경`);
-    return { ok: true, message: '비밀번호가 변경되었습니다.' };
+    return { ok: false, message: '백엔드에 연결되어 있지 않아 비밀번호를 변경할 수 없습니다.' };
   };
 
   const addListRow = (listKey, row) => {
@@ -324,9 +294,6 @@ export function AppProvider({ children }) {
         [listKey]: { ...target, rows, total: `총 ${rows.length}건` },
       };
     });
-    if (listKey === 'users' && removedRow?.[1]) {
-      setAccounts((current) => current.filter((account) => account.id !== removedRow[1]));
-    }
     writeAuditLog(listKey, 'DELETE', `${listKey} 데이터 삭제`);
   };
 
@@ -338,18 +305,6 @@ export function AppProvider({ children }) {
   const addSchedule = (schedule) => {
     setSchedules((current) => [...current, schedule]);
     writeAuditLog('schedules', 'CREATE', '일정 등록');
-  };
-
-  const upsertAccount = (account) => {
-    setAccounts((current) => {
-      const exists = current.some((item) => item.id === account.id);
-      if (exists) {
-        return current.map((item) =>
-          item.id === account.id ? { ...item, ...account, password: account.password || item.password } : item,
-        );
-      }
-      return [...current, account];
-    });
   };
 
   const saveRoleMenus = (roleCode, rows) => {
@@ -386,11 +341,10 @@ export function AppProvider({ children }) {
       user,
       apiStatus,
       login,
-      localLogin,
       logout,
       changePassword,
     }),
-    [user, apiStatus, accounts],
+    [user, apiStatus],
   );
 
   const dataValue = useMemo(
@@ -416,7 +370,6 @@ export function AppProvider({ children }) {
       removeRow,
       addSchedule,
       addMessage,
-      upsertAccount,
       saveRoleMenus,
       saveFormRecord,
       refreshBackendState,

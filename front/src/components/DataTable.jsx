@@ -130,6 +130,7 @@ function renderCell(cell, options = {}) {
   }
 
   if (options.isRoleAction) {
+    const protectedRole = ['ROLE_ADMIN', 'ADMIN'].includes(String(options.row?.[1] ?? '').toUpperCase());
     return (
       <span className="role-action-group">
         <button className="table-action" type="button" onClick={() => options.onAction('보기')}>
@@ -138,6 +139,11 @@ function renderCell(cell, options = {}) {
         {options.canUpdate ? (
           <button className="table-action" type="button" onClick={() => options.onAction('수정')}>
             수정
+          </button>
+        ) : null}
+        {options.canDelete && !protectedRole ? (
+          <button className="table-action danger" type="button" onClick={() => options.onAction('삭제')}>
+            삭제
           </button>
         ) : null}
       </span>

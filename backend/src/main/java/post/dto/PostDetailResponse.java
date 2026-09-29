@@ -15,10 +15,11 @@ public record PostDetailResponse(
         Integer viewCount,
         Integer recommendCount,
         Integer dislikeCount,
+        String myReaction,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static PostDetailResponse from(Post post) {
+    public static PostDetailResponse from(Post post, String myReaction) {
         return new PostDetailResponse(
                 post.getPostId(),
                 post.getBoard().getBoardId(),
@@ -30,6 +31,7 @@ public record PostDetailResponse(
                 post.getViewCount(),
                 post.getRecommendCount(),
                 post.getDislikeCount(),
+                myReaction,
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );

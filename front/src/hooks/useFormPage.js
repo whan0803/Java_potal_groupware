@@ -64,7 +64,6 @@ export function useFormPage(formKey, config) {
     updateListRow,
     addSchedule,
     addMessage,
-    upsertAccount,
     saveFormRecord,
   } = useApp();
 
@@ -149,15 +148,6 @@ export function useFormPage(formKey, config) {
       const row = buildRow(formKey, sourceValues, rowNumber, editingRow, user);
       if (row && editingRow) updateListRow(target.listKey, editIndex, row);
       if (row && !editingRow) addListRow(target.listKey, row);
-      if (formKey === 'userRegister') {
-        upsertAccount({
-          id: values.loginId,
-          password: values.password,
-          name: values.userName,
-          role: selectedRoles[0] ?? '일반 사용자',
-          enabled: values.useYn !== '미사용',
-        });
-      }
     }
 
     if (formKey === 'messageCompose') {
